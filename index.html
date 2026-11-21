@@ -1,0 +1,1870 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#24306B">
+<title>POS</title>
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="icon.svg">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Figtree:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --indigo:#24306B; --indigo-2:#3A4890; --paper:#F5F6FA; --card:#FFFFFF;
+    --ink:#1B2030; --muted:#6B7186; --line:#E2E4EE; --marigold:#E8A317;
+    --marigold-ink:#3B2A00; --ok:#2E7D5B; --bad:#B3261E; --tag:#FFF6E0;
+    --r-sm:8px; --r-md:14px;
+  }
+  *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+  html,body{margin:0;height:100%;background:var(--paper);color:var(--ink);
+    font:16px/1.4 Figtree,system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+  button{font:inherit;color:inherit;cursor:pointer}
+  input,select{font:inherit}
+  :focus-visible{outline:3px solid var(--marigold);outline-offset:2px}
+  .num{font-variant-numeric:tabular-nums}
+  .hidden{display:none!important}
+
+  /* header */
+  header{position:sticky;top:0;z-index:5;background:var(--indigo);color:#fff;padding:12px 16px 0}
+  .hrow{display:flex;align-items:center;justify-content:space-between;gap:8px}
+  .shop{font-weight:800;font-size:18px;letter-spacing:-.01em}
+  .who{font-size:13px;opacity:.8;background:none;border:0;color:#fff;padding:4px 0}
+  nav{display:flex;gap:4px;margin-top:10px}
+  nav button{flex:1;background:none;border:0;color:#fff;opacity:.7;padding:10px 0 12px;font-weight:600;
+    border-bottom:3px solid transparent}
+  nav button[aria-selected=true]{opacity:1;border-bottom-color:var(--marigold)}
+
+  main{padding:12px 12px 120px;max-width:720px;margin:0 auto}
+
+  /* search */
+  .searchbar{display:flex;gap:8px;position:sticky;top:96px;z-index:4;background:var(--paper);padding:4px 0 8px}
+  .searchbar input{flex:1;min-width:0;border:1.5px solid var(--line);border-radius:var(--r-md);padding:12px 14px;background:#fff}
+  .btn-scan{border:0;border-radius:var(--r-md);background:var(--indigo);color:#fff;padding:0 16px;font-weight:600}
+  .cats{display:flex;gap:6px;overflow-x:auto;padding:2px 0 10px;scrollbar-width:none}
+  .cats button{white-space:nowrap;border:1.5px solid var(--line);background:#fff;border-radius:999px;padding:6px 12px;font-size:14px}
+  .cats button[aria-pressed=true]{background:var(--ink);color:#fff;border-color:var(--ink)}
+
+  /* product list */
+  .prod{background:var(--card);border:1px solid var(--line);border-radius:var(--r-md);margin-bottom:8px}
+  .prod>button{width:100%;display:flex;justify-content:space-between;align-items:center;gap:12px;
+    background:none;border:0;padding:14px;text-align:left}
+  .pname{font-weight:700}
+  .pmeta{font-size:13px;color:var(--muted)}
+  .pprice{font-weight:700;white-space:nowrap}
+  .vars{padding:0 14px 14px}
+  .colour{display:flex;align-items:center;gap:10px;padding:8px 0;border-top:1px dashed var(--line)}
+  .cname{width:72px;flex:none;font-size:14px;color:var(--muted)}
+  .tags{display:flex;flex-wrap:wrap;gap:8px}
+
+  /* size chips styled like swing tags: the memorable element */
+  .tag{position:relative;min-width:58px;border:1.5px solid #D9B65C;background:var(--tag);
+    border-radius:4px 10px 10px 4px;padding:6px 10px 6px 18px;text-align:left;line-height:1.1}
+  .tag::before{content:"";position:absolute;left:6px;top:50%;width:6px;height:6px;margin-top:-3px;
+    border-radius:50%;background:var(--paper);box-shadow:inset 0 0 0 1.5px #D9B65C}
+  .tag b{display:block;font-size:15px}
+  .tag small{font-size:11px;color:var(--muted)}
+  .tag.low small{color:var(--bad);font-weight:600}
+  .tag:disabled{opacity:.4;cursor:not-allowed}
+  .tag.in-cart{background:var(--indigo);border-color:var(--indigo);color:#fff}
+  .tag.in-cart small{color:#C9CFF0}
+  .tag.in-cart::before{background:var(--indigo-2);box-shadow:none}
+
+  /* bottom bill bar */
+  .billbar{position:fixed;left:0;right:0;bottom:0;z-index:6;padding:10px 12px calc(10px + env(safe-area-inset-bottom));
+    background:var(--card);border-top:1px solid var(--line)}
+  .billbar button{width:100%;max-width:720px;margin:0 auto;display:flex;justify-content:space-between;align-items:center;
+    border:0;border-radius:var(--r-md);background:var(--marigold);color:var(--marigold-ink);padding:14px 18px;font-weight:800;font-size:17px}
+  .billbar button:disabled{background:var(--line);color:var(--muted)}
+
+  /* sheets / overlays */
+  .sheet{position:fixed;inset:0;z-index:10;background:var(--paper);overflow-y:auto;padding-bottom:110px}
+  .sheet-head{position:sticky;top:0;background:var(--paper);display:flex;align-items:center;gap:8px;
+    padding:14px 12px;border-bottom:1px solid var(--line);z-index:2}
+  .sheet-head h2{margin:0;font-size:18px;flex:1}
+  .icon-btn{border:0;background:#fff;border:1px solid var(--line);border-radius:10px;padding:8px 12px;font-weight:600}
+  .wrap{max-width:720px;margin:0 auto;padding:12px}
+
+  .line{display:grid;grid-template-columns:1fr auto;gap:4px 12px;background:#fff;border:1px solid var(--line);
+    border-radius:var(--r-md);padding:12px;margin-bottom:8px}
+  .line .lt{font-weight:700;text-align:right}
+  .stepper{display:flex;align-items:center;border:1.5px solid var(--line);border-radius:10px;overflow:hidden}
+  .stepper button{border:0;background:#fff;width:40px;height:36px;font-size:20px;font-weight:700}
+  .stepper span{min-width:32px;text-align:center;font-weight:700}
+  .line-actions{display:flex;gap:10px;align-items:center;grid-column:1/-1}
+  .link{background:none;border:0;color:var(--indigo-2);font-weight:600;padding:6px 0}
+  .link.danger{color:var(--bad)}
+
+  .field{margin:14px 0}
+  .field label{display:block;font-size:14px;font-weight:600;margin-bottom:6px}
+  .field input{width:100%;border:1.5px solid var(--line);border-radius:10px;padding:12px;background:#fff}
+  .seg{display:grid;grid-template-columns:repeat(4,1fr);gap:6px}
+  .seg button{border:1.5px solid var(--line);background:#fff;border-radius:10px;padding:12px 0;font-weight:600}
+  .seg button[aria-pressed=true]{background:var(--indigo);border-color:var(--indigo);color:#fff}
+  .totals{background:#fff;border:1px solid var(--line);border-radius:var(--r-md);padding:12px;margin-top:14px}
+  .totals div{display:flex;justify-content:space-between;padding:3px 0}
+  .totals .grand{font-size:20px;font-weight:800;border-top:1px solid var(--line);margin-top:6px;padding-top:8px}
+
+  /* receipt */
+  .receipt{background:#fff;max-width:380px;margin:12px auto;padding:20px 18px;border-radius:4px;
+    box-shadow:0 1px 0 var(--line),0 8px 24px rgba(36,48,107,.08);font-size:14px}
+  .receipt h3{margin:0;text-align:center;font-size:18px}
+  .receipt .c{text-align:center;color:var(--muted);font-size:12px}
+  .receipt hr{border:0;border-top:1px dashed #BFC3D3;margin:10px 0}
+  .receipt .row{display:flex;justify-content:space-between;gap:8px}
+  .receipt .sub{color:var(--muted);font-size:12px}
+  .receipt .big{font-size:18px;font-weight:800}
+  .actions{display:grid;grid-template-columns:1fr 1fr;gap:8px;max-width:380px;margin:0 auto}
+  .actions button{border:1.5px solid var(--line);background:#fff;border-radius:10px;padding:12px;font-weight:700}
+  .actions .primary{grid-column:1/-1;background:var(--marigold);border-color:var(--marigold);color:var(--marigold-ink)}
+
+  /* today */
+  .daytotal{background:var(--indigo);color:#fff;border-radius:var(--r-md);padding:16px;margin-bottom:10px}
+  .daytotal .amt{font-size:32px;font-weight:800;letter-spacing:-.02em}
+  .daytotal .sub{opacity:.8;font-size:14px}
+  .modes{display:flex;flex-wrap:wrap;gap:6px;margin-top:10px}
+  .modes span{background:rgba(255,255,255,.14);border-radius:999px;padding:4px 10px;font-size:13px}
+  .bill{width:100%;display:flex;justify-content:space-between;background:#fff;border:1px solid var(--line);
+    border-radius:var(--r-md);padding:12px;margin-bottom:6px;text-align:left}
+  .bill .neg{color:var(--bad)}
+
+  /* login */
+  .login{max-width:360px;margin:12vh auto 0;padding:0 20px}
+  .login h1{font-size:26px;margin:0 0 4px;letter-spacing:-.02em}
+  .login p{color:var(--muted);margin:0 0 20px}
+  .login select,.login input{width:100%;border:1.5px solid var(--line);border-radius:10px;padding:14px;background:#fff;margin-bottom:10px}
+  .login input{letter-spacing:.4em;text-align:center;font-size:22px}
+  .login button{width:100%;border:0;border-radius:10px;background:var(--indigo);color:#fff;padding:14px;font-weight:700}
+
+  .status{font-size:14px;color:var(--muted);margin:-8px 0 14px;white-space:pre-wrap}
+  .status.err{color:var(--bad);background:#FBEAEA;border-radius:10px;padding:10px 12px;margin:0 0 14px}
+  .empty{text-align:center;color:var(--muted);padding:40px 16px}
+  .toast{position:fixed;left:50%;bottom:calc(92px + env(safe-area-inset-bottom));white-space:nowrap;overflow:hidden;text-overflow:ellipsis;transform:translateX(-50%);z-index:30;background:var(--ink);color:#fff;
+    padding:10px 16px;border-radius:999px;font-size:14px;max-width:90vw}
+  .toast.err{background:var(--bad)}
+  .busy{position:fixed;inset:0;z-index:40;background:rgba(245,246,250,.7);display:flex;align-items:center;justify-content:center;font-weight:700}
+  #scanner{width:100%;max-width:480px;margin:0 auto;border-radius:var(--r-md);overflow:hidden;background:#000}
+
+  @media (prefers-reduced-motion:no-preference){ .toast{animation:pop .18s ease-out} @keyframes pop{from{opacity:0;transform:translate(-50%,8px)}} }
+  .menu{display:grid;gap:8px}
+  .menu button{display:flex;justify-content:space-between;align-items:center;text-align:left;background:#fff;border:1px solid var(--line);
+    border-radius:var(--r-md);padding:16px}
+  .menu b{display:block;font-size:16px}
+  .menu small{color:var(--muted)}
+  .menu .chev{font-size:22px;color:var(--muted)}
+  .banner{background:var(--tag);border:1.5px solid #D9B65C;border-radius:var(--r-md);padding:10px 12px;margin:4px 0 8px;
+    display:flex;justify-content:space-between;align-items:center;gap:8px;font-size:14px}
+  .results{display:grid;gap:6px;margin:6px 0 10px}
+  .results button{display:flex;justify-content:space-between;gap:8px;text-align:left;background:#fff;border:1px solid var(--line);
+    border-radius:10px;padding:10px 12px;font-size:14px}
+  .grid2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+  .field select,.field textarea{width:100%;border:1.5px solid var(--line);border-radius:10px;padding:12px;background:#fff}
+  .inrow{display:flex;gap:8px}
+  .inrow input{flex:1;min-width:0;border:1.5px solid var(--line);border-radius:10px;padding:12px;background:#fff}
+  .inrow button{border:0;border-radius:10px;background:var(--indigo);color:#fff;padding:0 14px;font-weight:600}
+  .mini{width:84px!important;padding:8px!important;text-align:right}
+  .chips{display:flex;flex-wrap:wrap;gap:6px;margin-top:6px}
+  .chips button{border:1.5px solid var(--line);background:#fff;border-radius:999px;padding:4px 10px;font-size:13px}
+  .check{display:flex;gap:10px;align-items:center;font-size:15px;margin:12px 0}
+  .check input{width:20px;height:20px}
+  .note{font-size:13px;color:var(--muted);margin:4px 0}
+  .chanbar{display:flex;justify-content:space-between;align-items:center;gap:8px;width:100%;text-align:left;background:#fff;
+    border:1.5px solid var(--line);border-radius:var(--r-md);padding:10px 12px;margin:0 0 8px;font-size:15px}
+  .chanbar span:last-child{color:var(--indigo-2);font-weight:700;white-space:nowrap}
+  .chanbar.alt{background:var(--tag);border-color:#D9B65C}
+  .pcard{background:#fff;border:1px solid var(--line);border-radius:var(--r-md);padding:14px;margin-bottom:10px}
+  .pcard h3{margin:0 0 2px;font-size:17px}
+  .kv{display:flex;justify-content:space-between;padding:3px 0;font-size:14px}
+  .kv.big{font-size:17px;font-weight:800;border-top:1px solid var(--line);margin-top:6px;padding-top:8px}
+  .pcard details{margin-top:8px;font-size:14px}
+  .pcard summary{cursor:pointer;font-weight:600;color:var(--indigo-2);padding:4px 0}
+  .pcard .btnrow{display:flex;gap:12px;margin-top:6px}
+  .stocklist div{display:flex;justify-content:space-between;padding:3px 0;border-top:1px dashed var(--line)}
+  .errbox{background:#FBEAEA;border:1px solid #E7B3B0;border-radius:var(--r-md);padding:10px 12px;margin-top:10px;font-size:14px}
+  .errbox ul,.okbox ul{margin:6px 0 0;padding-left:18px}
+  .okbox{background:#EEF6F1;border:1px solid #BBD9C7;border-radius:var(--r-md);padding:10px 12px;margin-top:10px;font-size:14px}
+  .filebox{border:1.5px dashed var(--line);background:#fff;border-radius:var(--r-md);padding:14px;margin:10px 0}
+  .filebox input[type=file]{width:100%;font:inherit}
+  #labelSheet{display:none}
+  @media print{
+    body[data-print="receipt"] *{visibility:hidden}
+    body[data-print="receipt"] .receipt, body[data-print="receipt"] .receipt *{visibility:visible}
+    body[data-print="receipt"] .receipt{position:absolute;left:0;top:0;box-shadow:none;margin:0;width:80mm;padding:0}
+    body[data-print="labels"] > *:not(#labelSheet){display:none!important}
+    body[data-print="labels"] #labelSheet{display:block}
+  }
+  .lbl{box-sizing:border-box;overflow:hidden;text-align:center;font-family:Arial,sans-serif;color:#000;
+    display:flex;flex-direction:column;justify-content:center;align-items:center;padding:1.5mm}
+  .lbl .ls{font-size:7pt}
+  .lbl .ln{font-size:8pt;font-weight:bold;white-space:nowrap;max-width:100%;overflow:hidden;text-overflow:ellipsis}
+  .lbl .lv{font-size:7.5pt}
+  .lbl .lp{font-size:10pt;font-weight:bold}
+  .lbl svg{max-width:100%;height:auto}
+  .a4grid{display:grid;grid-template-columns:repeat(3,63.5mm);grid-auto-rows:33.9mm;column-gap:2.5mm}
+  .roll .lbl{width:50mm;height:25mm;page-break-after:always;break-after:page}
+</style>
+</head>
+<body>
+
+<!-- Login -->
+<section id="vLogin" class="login">
+  <h1 id="loginShop">Sign in</h1>
+  <p>Choose your name and enter your PIN.</p>
+  <div id="status" class="status" role="alert">Loading…</div>
+  <select id="loginUser" aria-label="User"></select>
+  <input id="loginPin" type="password" inputmode="numeric" autocomplete="off" maxlength="8" aria-label="PIN" placeholder="••••">
+  <button id="loginBtn">Sign in</button>
+</section>
+
+<!-- App shell -->
+<div id="app" class="hidden">
+  <header>
+    <div class="hrow">
+      <div class="shop" id="shopName"></div>
+      <button class="who" id="whoBtn" title="Sign out"></button>
+    </div>
+    <nav role="tablist">
+      <button role="tab" id="tabSell" aria-selected="true">Sell</button>
+      <button role="tab" id="tabToday" aria-selected="false">Today</button>
+      <button role="tab" id="tabMore" aria-selected="false">More</button>
+    </nav>
+  </header>
+
+  <main id="vSell">
+    <button class="chanbar" id="chanBar"><span id="chanText"></span><span>Change</span></button>
+    <div class="banner hidden" id="exBanner"></div>
+    <div class="searchbar">
+      <input id="q" type="search" placeholder="Search name, SKU or barcode" autocomplete="off" enterkeyhint="search">
+      <button class="btn-scan" id="scanBtn">Scan</button>
+    </div>
+    <div class="cats" id="cats"></div>
+    <div id="plist"></div>
+  </main>
+
+  <main id="vToday" class="hidden"></main>
+
+  <main id="vMore" class="hidden">
+    <div class="menu">
+      <button id="mReturn"><span><b>Return / exchange</b><small>Find a bill, take items back, refund or give exchange credit</small></span><span class="chev">›</span></button>
+      <button id="mExpense"><span><b>Add expense</b><small>Rent, salaries, transport, bills</small></span><span class="chev">›</span></button>
+      <button id="mStockIn" class="owner-only"><span><b>Stock in</b><small>Record a supplier delivery</small></span><span class="chev">›</span></button>
+      <button id="mNewProd" class="owner-only"><span><b>New product</b><small>Add a design with its sizes and colours</small></span><span class="chev">›</span></button>
+      <button id="mImport" class="owner-only"><span><b>Import products (Excel)</b><small>Add many products and opening stock from a spreadsheet</small></span><span class="chev">›</span></button>
+      <button id="mTransfer" class="owner-only"><span><b>Transfer stock</b><small>Move pieces between main stock and a partner shop</small></span><span class="chev">›</span></button>
+      <button id="mPartners" class="owner-only"><span><b>Partner shops</b><small>Their stock, sales this month, rent and commission terms</small></span><span class="chev">›</span></button>
+      <button id="mSettle" class="owner-only"><span><b>Partner settlement</b><small>Month-end: commission, rent and money received</small></span><span class="chev">›</span></button>
+      <button id="mOwners" class="owner-only"><span><b>Owners’ accounts</b><small>Capital, drawings, profit split, expenses paid from an owner’s pocket</small></span><span class="chev">›</span></button>
+      <button id="mLabels"><span><b>Print barcode labels</b><small>Tags for items, ready to scan</small></span><span class="chev">›</span></button>
+    </div>
+  </main>
+
+  <div class="billbar" id="billbar">
+    <button id="reviewBtn" disabled><span id="bbCount">No items</span><span class="num" id="bbTotal">₹0</span></button>
+  </div>
+</div>
+
+<!-- Bill sheet -->
+<section id="vBill" class="sheet hidden" aria-label="Bill">
+  <div class="sheet-head"><button class="icon-btn" id="billBack">Back</button><h2>Bill</h2>
+    <button class="link danger" id="clearBill">Clear</button></div>
+  <div class="wrap">
+    <div class="note" id="billChan"></div>
+    <div id="lines"></div>
+    <div class="field">
+      <label>Payment</label>
+      <div class="seg" id="payModes"></div>
+    </div>
+    <div class="field"><label for="billDisc">Bill discount (₹)</label>
+      <input id="billDisc" type="number" inputmode="decimal" min="0" placeholder="0"></div>
+    <div class="field"><label for="custName">Customer name (optional)</label>
+      <input id="custName" type="text" autocomplete="off"></div>
+    <div class="field"><label for="custPhone">Customer mobile (optional, for WhatsApp bill)</label>
+      <input id="custPhone" type="tel" inputmode="tel" autocomplete="off"></div>
+    <div class="totals num" id="totals"></div>
+  </div>
+  <div class="billbar"><button id="completeBtn"><span>Complete sale</span><span class="num" id="cbTotal"></span></button></div>
+</section>
+
+<!-- Receipt -->
+<section id="vReceipt" class="sheet hidden" aria-label="Receipt">
+  <div class="sheet-head"><button class="icon-btn" id="rcptBack">Close</button><h2 id="rcptTitle">Bill saved</h2></div>
+  <div class="wrap">
+    <div class="receipt num" id="receipt"></div>
+    <div class="actions">
+      <button id="printBtn">Print</button>
+      <button id="waBtn">Send on WhatsApp</button>
+      <button id="rcptReturnBtn" style="grid-column:1/-1">Return items from this bill</button>
+      <button class="primary" id="newSaleBtn">New sale</button>
+    </div>
+  </div>
+</section>
+
+<!-- Return / exchange -->
+<section id="vReturn" class="sheet hidden" aria-label="Return or exchange">
+  <div class="sheet-head"><button class="icon-btn" id="retBack">Back</button><h2>Return / exchange</h2></div>
+  <div class="wrap">
+    <div id="retFind">
+      <div class="field"><label for="retQ">Bill number or customer mobile</label>
+        <div class="inrow"><input id="retQ" type="search" autocomplete="off" placeholder="e.g. SAL-20261004-03 or 98765"><button id="retFindBtn">Find</button></div></div>
+      <div class="results" id="retResults"></div>
+      <p class="note">Tip: you can also open a bill from the Today tab and tap “Return items from this bill”.</p>
+    </div>
+    <div id="retPick" class="hidden">
+      <div id="retHead" class="note"></div>
+      <div id="retLines"></div>
+      <div class="field"><label>Give back as</label><div class="seg" id="retModes"></div></div>
+      <div class="field"><label for="retReason">Reason (optional)</label><input id="retReason" type="text" autocomplete="off" placeholder="Size issue, defect…"></div>
+      <div class="totals num" id="retTotals"></div>
+    </div>
+  </div>
+  <div class="billbar hidden" id="retBar"><button id="retSubmit"><span id="retSubmitLabel">Refund</span><span class="num" id="retSubmitAmt"></span></button></div>
+</section>
+
+<!-- Expense -->
+<section id="vExpense" class="sheet hidden" aria-label="Add expense">
+  <div class="sheet-head"><button class="icon-btn" id="expBack">Back</button><h2>Add expense</h2></div>
+  <div class="wrap">
+    <div class="grid2">
+      <div class="field"><label for="expDate">Date</label><input id="expDate" type="date"></div>
+      <div class="field"><label for="expAmt">Amount (₹)</label><input id="expAmt" type="number" inputmode="decimal" min="0"></div>
+    </div>
+    <div class="field"><label for="expCat">Category</label><select id="expCat"></select></div>
+    <div class="field"><label>Paid with</label><div class="seg" id="expModes" style="grid-template-columns:repeat(3,1fr)"></div></div>
+    <div class="field hidden" id="expPaidByBox"><label>Money came from</label><div class="seg" id="expPaidBy" style="grid-template-columns:repeat(auto-fit,minmax(90px,1fr))"></div></div>
+    <div class="field"><label for="expNotes">Notes (optional)</label><input id="expNotes" type="text" autocomplete="off"></div>
+    <h3 style="margin:22px 0 8px;font-size:16px" id="expListHead">This month</h3>
+    <div id="expList"></div>
+  </div>
+  <div class="billbar"><button id="expSave"><span>Save expense</span><span class="num" id="expSaveAmt"></span></button></div>
+</section>
+
+<!-- Stock in -->
+<section id="vStockIn" class="sheet hidden" aria-label="Stock in">
+  <div class="sheet-head"><button class="icon-btn" id="siBack">Back</button><h2>Stock in</h2><button class="link" id="siNewProd">+ New product</button></div>
+  <div class="wrap">
+    <div class="grid2">
+      <div class="field"><label for="siSupplier">Supplier</label><input id="siSupplier" type="text" autocomplete="off" list="siSuppliers"></div>
+      <div class="field"><label for="siInvoice">Invoice no. (optional)</label><input id="siInvoice" type="text" autocomplete="off"></div>
+    </div>
+    <datalist id="siSuppliers"></datalist>
+    <div class="field hidden" id="siPaidByBox"><label>Money came from</label><div class="seg" id="siPaidBy" style="grid-template-columns:repeat(auto-fit,minmax(90px,1fr))"></div></div>
+    <div class="field"><label for="siQ">Add items</label>
+      <div class="inrow"><input id="siQ" type="search" autocomplete="off" placeholder="Search or scan"><button id="siScan">Scan</button></div></div>
+    <div class="results" id="siResults"></div>
+    <div id="siLines"></div>
+    <label class="check"><input type="checkbox" id="siUpdCost" checked> Update cost price in the sheet to these costs</label>
+  </div>
+  <div class="billbar"><button id="siSave"><span id="siSaveLabel">Save stock in</span><span class="num" id="siSaveAmt"></span></button></div>
+</section>
+
+<!-- New product -->
+<section id="vNewProd" class="sheet hidden" aria-label="New product">
+  <div class="sheet-head"><button class="icon-btn" id="npBack">Back</button><h2>New product</h2></div>
+  <div class="wrap">
+    <div class="field"><label for="npName">Product name</label><input id="npName" type="text" autocomplete="off" placeholder="e.g. Women's Rayon Kurti"></div>
+    <div class="field"><label for="npCat">Category</label><select id="npCat"></select></div>
+    <div class="field"><label for="npSizes">Sizes (comma separated)</label><input id="npSizes" type="text" autocomplete="off" placeholder="S, M, L, XL">
+      <div class="chips" id="npSizeChips"></div></div>
+    <div class="field"><label for="npColours">Colours (comma separated)</label><input id="npColours" type="text" autocomplete="off" placeholder="Black, Navy"></div>
+    <div class="grid2">
+      <div class="field"><label for="npPrice">Selling price (₹)</label><input id="npPrice" type="number" inputmode="decimal" min="0"></div>
+      <div class="field"><label for="npCost">Cost price (₹)</label><input id="npCost" type="number" inputmode="decimal" min="0"></div>
+      <div class="field"><label for="npReorder">Reorder level</label><input id="npReorder" type="number" inputmode="numeric" min="0" value="5"></div>
+      <div class="field"><label for="npGst">GST %</label><input id="npGst" type="number" inputmode="decimal" min="0" value="5"></div>
+      <div class="field"><label for="npBrand">Brand (optional)</label><input id="npBrand" type="text" autocomplete="off"></div>
+      <div class="field"><label for="npHsn">HSN (optional)</label><input id="npHsn" type="text" inputmode="numeric" autocomplete="off"></div>
+    </div>
+    <p class="note" id="npPreview"></p>
+  </div>
+  <div class="billbar"><button id="npSave"><span>Create and add stock</span><span></span></button></div>
+</section>
+
+<!-- Channel -->
+<section id="vChannel" class="sheet hidden" aria-label="Sales channel">
+  <div class="sheet-head"><button class="icon-btn" id="chBack">Done</button><h2>Where is this sale from?</h2></div>
+  <div class="wrap">
+    <div class="seg" id="chSeg" style="grid-template-columns:1fr 1fr"></div>
+    <p class="note" id="chNote"></p>
+    <div id="chPartner" class="hidden">
+      <div class="field"><label for="chLoc">Partner shop</label><select id="chLoc"></select></div>
+      <div class="field"><label for="chDate">Date of sale (as reported by the partner)</label><input id="chDate" type="date"></div>
+      <p class="note">These sales come out of that shop’s own stock. Keep the date as the partner reported it; every bill you enter stays on that date.</p>
+    </div>
+  </div>
+</section>
+
+<!-- Transfer -->
+<section id="vTransfer" class="sheet hidden" aria-label="Transfer stock">
+  <div class="sheet-head"><button class="icon-btn" id="trBack">Back</button><h2>Transfer stock</h2></div>
+  <div class="wrap">
+    <div class="grid2">
+      <div class="field"><label for="trFrom">From</label><select id="trFrom"></select></div>
+      <div class="field"><label for="trTo">To</label><select id="trTo"></select></div>
+    </div>
+    <div class="field"><label for="trQ">Add items</label>
+      <div class="inrow"><input id="trQ" type="search" autocomplete="off" placeholder="Search or scan"><button id="trScan">Scan</button></div></div>
+    <div class="results" id="trResults"></div>
+    <div id="trLines"></div>
+  </div>
+  <div class="billbar"><button id="trSave"><span id="trSaveLabel">Transfer</span><span class="num" id="trSaveAmt"></span></button></div>
+</section>
+
+<!-- Partner shops -->
+<section id="vPartners" class="sheet hidden" aria-label="Partner shops">
+  <div class="sheet-head"><button class="icon-btn" id="paBack">Back</button><h2>Partner shops</h2></div>
+  <div class="wrap">
+    <div id="paList"></div>
+    <h3 style="margin:22px 0 4px;font-size:16px">Add a partner shop</h3>
+    <div class="field"><label for="paName">Shop name</label><input id="paName" type="text" autocomplete="off"></div>
+    <div class="grid2">
+      <div class="field"><label for="paPct">Their share of sales (%)</label><input id="paPct" type="number" inputmode="decimal" min="0" max="100" value="5"></div>
+      <div class="field"><label for="paRent">Monthly rent (₹)</label><input id="paRent" type="number" inputmode="decimal" min="0"></div>
+    </div>
+    <button class="actions" style="display:block;width:100%;border:0;border-radius:10px;background:var(--indigo);color:#fff;padding:14px;font-weight:700" id="paAdd">Add partner shop</button>
+  </div>
+</section>
+
+<!-- Partner settlement -->
+<section id="vSettle" class="sheet hidden" aria-label="Partner settlement">
+  <div class="sheet-head"><button class="icon-btn" id="seBack">Back</button><h2>Partner settlement</h2></div>
+  <div class="wrap">
+    <div class="field"><label for="seLoc">Partner shop</label><select id="seLoc"></select></div>
+    <div class="grid2">
+      <div class="field"><label for="seMonth">Month</label><select id="seMonth"></select></div>
+      <div class="field"><label for="seYear">Year</label><select id="seYear"></select></div>
+    </div>
+    <div id="sePreview"></div>
+    <h3 style="margin:22px 0 8px;font-size:16px" id="seListHead">Settlements</h3>
+    <div id="seList"></div>
+  </div>
+  <div class="billbar hidden" id="seBar"><button id="seSave"><span id="seSaveLabel">Save settlement</span><span></span></button></div>
+</section>
+
+<!-- Owners -->
+<section id="vOwners" class="sheet hidden" aria-label="Owners’ accounts">
+  <div class="sheet-head"><button class="icon-btn" id="owBack">Back</button><h2>Owners’ accounts</h2></div>
+  <div class="wrap">
+    <div class="seg" id="owPeriod" style="grid-template-columns:repeat(3,1fr);margin-bottom:10px"></div>
+    <div id="owBody"></div>
+  </div>
+  <div class="billbar"><button id="owAdd"><span>Add entry</span><span></span></button></div>
+</section>
+
+<!-- Capital entry -->
+<section id="vCapEntry" class="sheet hidden" aria-label="Capital entry">
+  <div class="sheet-head"><button class="icon-btn" id="ceBack">Back</button><h2>New entry</h2></div>
+  <div class="wrap">
+    <div class="seg" id="ceType" style="grid-template-columns:repeat(3,1fr)"></div>
+    <p class="note" id="ceHelp"></p>
+    <div class="field"><label for="ceOwner">Owner</label><select id="ceOwner"></select></div>
+    <div class="grid2">
+      <div class="field"><label for="ceAmt">Amount (₹)</label><input id="ceAmt" type="number" inputmode="decimal" min="0"></div>
+      <div class="field"><label for="ceDate">Date</label><input id="ceDate" type="date"></div>
+    </div>
+    <div class="field"><label>How the money moved</label><div class="seg" id="ceMode" style="grid-template-columns:repeat(2,1fr)"></div></div>
+    <div class="field"><label for="ceNotes">Notes (optional)</label><input id="ceNotes" type="text" autocomplete="off"></div>
+  </div>
+  <div class="billbar"><button id="ceSave"><span id="ceSaveLabel">Save entry</span><span class="num" id="ceSaveAmt"></span></button></div>
+</section>
+
+<!-- Import products -->
+<section id="vImport" class="sheet hidden" aria-label="Import products">
+  <div class="sheet-head"><button class="icon-btn" id="imBack">Back</button><h2>Import products</h2></div>
+  <div class="wrap">
+    <p class="note">One row for every size and colour. Use the template so the columns match.</p>
+    <a class="link" href="product-upload-template.xlsx" download style="display:inline-block;padding:6px 0">Download the Excel template</a>
+    <div class="filebox">
+      <label for="imFile" class="pmeta" style="display:block;margin-bottom:6px">Choose your .xlsx, .xls or .csv file</label>
+      <input id="imFile" type="file" accept=".xlsx,.xls,.csv,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.ms-excel,text/csv">
+    </div>
+    <label class="check"><input type="checkbox" id="imCats"> Create categories that do not exist yet</label>
+    <label class="check"><input type="checkbox" id="imUpdate"> Update prices of items that already exist</label>
+    <div id="imResult"></div>
+  </div>
+  <div class="billbar hidden" id="imBar"><button id="imGo"><span id="imGoLabel">Import</span><span></span></button></div>
+</section>
+
+<!-- Labels -->
+<section id="vLabels" class="sheet hidden" aria-label="Barcode labels">
+  <div class="sheet-head"><button class="icon-btn" id="lbBack">Back</button><h2>Barcode labels</h2><button class="link danger" id="lbClear">Clear</button></div>
+  <div class="wrap">
+    <div class="field"><label for="lbQ">Add items</label>
+      <div class="inrow"><input id="lbQ" type="search" autocomplete="off" placeholder="Search or scan"><button id="lbScan">Scan</button></div></div>
+    <div class="results" id="lbResults"></div>
+    <button class="link" id="lbAll">+ Add every item (1 label each)</button>
+    <div id="lbLines"></div>
+    <div class="field"><label>Label paper</label><div class="seg" id="lbFormat" style="grid-template-columns:1fr 1fr"></div></div>
+    <p class="note">A4 sheet: 24 labels per page (3 × 8, 63.5 × 33.9 mm). Roll: one 50 × 25 mm label per page, for thermal label printers. In the print dialog, set margins to “None” and scale to 100%.</p>
+  </div>
+  <div class="billbar"><button id="lbPrint"><span>Print labels</span><span class="num" id="lbCount"></span></button></div>
+</section>
+
+<div id="labelSheet"></div>
+<style id="pageStyle"></style>
+
+<!-- Scanner -->
+<section id="vScan" class="sheet hidden" aria-label="Scan barcode">
+  <div class="sheet-head"><button class="icon-btn" id="scanClose">Done</button><h2>Scan items</h2></div>
+  <div class="wrap">
+    <div id="scanner"></div>
+    <p class="empty" id="scanMsg">Point the camera at the barcode. Each scan adds one piece.</p>
+  </div>
+</section>
+
+<div id="busy" class="busy hidden">Saving…</div>
+
+<script>
+window.POS_CONFIG = {
+  API_URL: 'PASTE_YOUR_APPS_SCRIPT_WEB_APP_URL_HERE'
+};
+</script>
+<script>
+function showFatal(msg){
+  var st = document.getElementById('status');
+  document.getElementById('vLogin').classList.remove('hidden');
+  if (st) { st.className = 'status err'; st.textContent = msg; }
+}
+window.addEventListener('error', function(e){ showFatal('Page error: ' + (e.message || e) + ' (line ' + e.lineno + ')'); });
+window.addEventListener('unhandledrejection', function(e){ showFatal('Error: ' + ((e.reason && e.reason.message) || e.reason)); });
+document.getElementById('status').textContent = 'Loading…';
+setTimeout(function(){
+  var st = document.getElementById('status');
+  if (st && st.textContent === 'Loading…')
+    showFatal('The page script did not start. Reload the page; if this repeats, re-upload index.html.');
+}, 8000);
+</script>
+<script>
+const $ = id => document.getElementById(id);
+const NL = String.fromCharCode(10);
+const fmt = n => (Number(n) < 0 ? '−' : '') + '₹' + Math.abs(Number(n || 0)).toLocaleString('en-IN', {maximumFractionDigits: 2});
+const esc = s => {
+  const d = document.createElement('div');
+  d.textContent = s == null ? '' : String(s);
+  return d.innerHTML.split('"').join(String.fromCharCode(38) + 'quot;').split("'").join(String.fromCharCode(38) + '#39;');
+};
+const store = {
+  get(k){ try { return localStorage.getItem(k); } catch(e){ return null; } },
+  set(k,v){ try { localStorage.setItem(k,v); } catch(e){} },
+  del(k){ try { localStorage.removeItem(k); } catch(e){} },
+};
+
+const S = { token: store.get('pos.token'), user: null, shop: null, items: [], bySku: {},
+            cart: [], cat: 'All', open: {}, payMode: 'UPI', lastReceipt: null, channel: 'Shop', loc: 'MAIN', saleDate: '' };
+const stockAt = (i, loc) => (i.stk && i.stk[loc]) || 0;
+const stockOf = i => stockAt(i, S.loc);
+
+async function call(fn, ...args){
+  const url = window.POS_CONFIG.API_URL;
+  if (!/^https?:/.test(url)) throw new Error('API_URL is not set. Edit index.html and paste your Apps Script web app URL.');
+  const ctrl = new AbortController();
+  const timer = setTimeout(() => ctrl.abort(), 30000);
+  let data;
+  try {
+    const res = await fetch(url, {
+      method: 'POST',
+      headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+      body: JSON.stringify({ fn, args }),
+      signal: ctrl.signal,
+    });
+    data = await res.json();
+  } catch (e) {
+    throw new Error(e.name === 'AbortError'
+      ? 'The server took too long to reply. Check the internet connection and try again.'
+      : 'Could not reach the server. Check the internet connection, and that the Apps Script deployment allows access to Anyone.');
+  } finally { clearTimeout(timer); }
+  if (!data.ok) {
+    if (String(data.error).includes('SESSION_EXPIRED')) { signOut(true); throw new Error('Session expired. Sign in again.'); }
+    throw new Error(data.error);
+  }
+  return data.result;
+}
+let toastTimer = null;
+function toast(msg, isErr){
+  let t = document.getElementById('toast');
+  if (!t) { t = document.createElement('div'); t.id = 'toast'; t.setAttribute('role', 'status'); document.body.appendChild(t); }
+  t.className = 'toast' + (isErr ? ' err' : '');
+  t.textContent = msg;
+  t.style.animation = 'none'; void t.offsetWidth; t.style.animation = '';
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => t.remove(), isErr ? 4000 : 1600);
+}
+function show(id, on){ $(id).classList.toggle('hidden', !on); }
+
+async function boot(){
+  const saved = store.get('pos.user');
+  if (S.token && saved) {
+    const s = JSON.parse(saved); S.user = s.user; S.shop = s.shop;
+    try { await enterApp(); return; } catch(e){  }
+  }
+  showLogin();
+}
+async function showLogin(){
+  show('app', false); show('vLogin', true);
+  $('status').className = 'status'; $('status').textContent = 'Loading users…';
+  let users;
+  try { users = await call('listUsers'); }
+  catch(e){ return showFatal(e.message || String(e)); }
+  if (!users || !users.length) return showFatal('No users found. Add people to the Users tab, then set PINs from the POS menu in the sheet.');
+  $('status').textContent = '';
+  $('loginUser').innerHTML = users.map(u => `<option value="${esc(u.name)}">${esc(u.name)}</option>`).join('');
+  const last = store.get('pos.lastEmail'); if (last) $('loginUser').value = last;
+  $('loginPin').focus();
+}
+$('loginBtn').onclick = async () => {
+  const email = $('loginUser').value, pin = $('loginPin').value;
+  if (!pin) return toast('Enter your PIN', true);
+  $('loginBtn').disabled = true;
+  try {
+    const r = await call('login', email, pin);
+    S.token = r.token; S.user = r.user; S.shop = r.shop;
+    store.set('pos.token', r.token); store.set('pos.user', JSON.stringify({user: r.user, shop: r.shop}));
+    store.set('pos.lastEmail', email);
+    $('loginPin').value = '';
+    await enterApp();
+  } catch(e){ toast(e.message, true); }
+  $('loginBtn').disabled = false;
+};
+$('loginPin').addEventListener('keydown', e => { if (e.key === 'Enter') $('loginBtn').click(); });
+
+function signOut(silent){
+  if (S.token && !silent) call('logout', S.token).catch(() => {});
+  S.token = null; store.del('pos.token'); store.del('pos.user');
+  showLogin();
+}
+$('whoBtn').onclick = () => { if (confirm('Sign out?')) signOut(); };
+
+async function enterApp(){
+  $('shopName').textContent = S.shop.name;
+  $('loginShop').textContent = S.shop.name;
+  $('whoBtn').textContent = S.user.name + ' · Sign out';
+  await Promise.all([loadCatalog(), loadMeta()]);
+  show('vLogin', false); show('app', true);
+  renderBillBar();
+}
+
+async function loadCatalog(){
+  const r = await call('getCatalog', S.token);
+  S.items = r.items; S.bySku = {}; S.byCode = {};
+  r.items.forEach(i => { S.bySku[i.sku] = i; S.byCode[i.sku.toUpperCase()] = i; if (i.barcode) S.byCode[i.barcode] = i; });
+  renderCats(); renderList();
+}
+function renderCats(){
+  const cats = ['All', ...new Set(S.items.map(i => i.category).filter(Boolean))];
+  $('cats').innerHTML = cats.map(c => `<button aria-pressed="${c === S.cat}" data-cat="${esc(c)}">${esc(c)}</button>`).join('');
+}
+$('cats').onclick = e => { const b = e.target.closest('button'); if (!b) return; S.cat = b.dataset.cat; renderCats(); renderList(); };
+$('q').addEventListener('input', renderList);
+$('q').addEventListener('keydown', e => {
+  if (e.key !== 'Enter') return;
+  const code = $('q').value.trim();
+  const hit = S.byCode[code] || S.byCode[code.toUpperCase()];
+  if (hit) { addToCart(hit.sku); $('q').value = ''; renderList(); }
+});
+
+function inCartQty(sku){ const l = S.cart.find(c => c.sku === sku); return l ? l.qty : 0; }
+
+function renderList(){
+  const q = $('q').value.trim().toLowerCase();
+  const groups = {};
+  S.items.forEach(i => {
+    if (S.cat !== 'All' && i.category !== S.cat) return;
+    if (q && !(i.name.toLowerCase().includes(q) || i.sku.toLowerCase().includes(q) ||
+               i.barcode.includes(q) || i.colour.toLowerCase().includes(q))) return;
+    (groups[i.productId] = groups[i.productId] || []).push(i);
+  });
+  const ids = Object.keys(groups);
+  if (!ids.length) { $('plist').innerHTML = `<div class="empty">No items match “${esc($('q').value)}”.<br>Check the spelling, or add the item in the Variants tab.</div>`; return; }
+  $('plist').innerHTML = ids.map(pid => {
+    const vs = groups[pid], p = vs[0];
+    const open = q || S.open[pid] || ids.length === 1;
+    const total = vs.reduce((s, v) => s + stockOf(v), 0);
+    const prices = [...new Set(vs.map(v => v.price))];
+    const colours = {};
+    vs.forEach(v => (colours[v.colour] = colours[v.colour] || []).push(v));
+    return `<div class="prod">
+      <button data-toggle="${esc(pid)}" aria-expanded="${!!open}">
+        <span><span class="pname">${esc(p.name)}</span><br><span class="pmeta">${total} in stock · ${Object.keys(colours).length} colour${Object.keys(colours).length > 1 ? 's' : ''}</span></span>
+        <span class="pprice num">${prices.map(fmt).join(' / ')}</span>
+      </button>
+      ${open ? `<div class="vars">${Object.entries(colours).map(([c, list]) => `
+        <div class="colour"><span class="cname">${esc(c)}</span><span class="tags">${list.map(v => {
+          const left = stockOf(v) - inCartQty(v.sku), inCart = inCartQty(v.sku);
+          return `<button class="tag ${inCart ? 'in-cart' : ''} ${left <= 2 && left > 0 ? 'low' : ''}" data-sku="${esc(v.sku)}" ${left <= 0 && !S.shop.allowNegativeStock ? 'disabled' : ''}
+             aria-label="${esc(p.name)} ${esc(c)} size ${esc(v.size)}, ${left} left">
+             <b>${esc(v.size)}</b><small>${inCart ? inCart + ' in bill' : left <= 0 ? 'sold out' : left + ' left'}</small></button>`;
+        }).join('')}</span></div>`).join('')}</div>` : ''}
+    </div>`;
+  }).join('');
+}
+$('plist').onclick = e => {
+  const t = e.target.closest('[data-toggle]');
+  if (t) { const id = t.dataset.toggle; S.open[id] = !S.open[id]; renderList(); return; }
+  const tag = e.target.closest('[data-sku]');
+  if (tag && !tag.disabled) addToCart(tag.dataset.sku);
+};
+
+function addToCart(sku, silent){
+  const it = S.bySku[sku]; if (!it) return false;
+  const line = S.cart.find(c => c.sku === sku);
+  const want = (line ? line.qty : 0) + 1;
+  if (!S.shop.allowNegativeStock && want > stockOf(it)) { toast(`Only ${stockOf(it)} of ${it.name} ${it.colour} ${it.size} in stock`, true); return false; }
+  if (line) line.qty++; else S.cart.push({ sku, qty: 1, lineDiscount: 0 });
+  if (!silent) toast(`Added ${it.name} · ${it.colour} ${it.size}`);
+  if (navigator.vibrate) navigator.vibrate(30);
+  renderBillBar(); renderList();
+  return true;
+}
+function cartTotals(){
+  const sub = S.cart.reduce((s, l) => s + S.bySku[l.sku].price * l.qty - (l.lineDiscount || 0), 0);
+  const bd = Math.max(0, Number($('billDisc').value) || 0);
+  const credit = S.exchange ? S.exchange.credit : 0;
+  return { sub, bd, total: sub - bd, credit, collect: sub - bd - credit, pcs: S.cart.reduce((s, l) => s + l.qty, 0) };
+}
+function renderBillBar(){
+  const t = cartTotals();
+  $('reviewBtn').disabled = !S.cart.length;
+  $('bbCount').textContent = S.cart.length ? `Review bill · ${t.pcs} pc${t.pcs > 1 ? 's' : ''}` : 'No items';
+  $('bbTotal').textContent = fmt(S.exchange ? t.collect : t.total);
+}
+$('reviewBtn').onclick = () => { renderBill(); show('vBill', true); };
+$('billBack').onclick = () => { show('vBill', false); renderList(); };
+$('clearBill').onclick = () => { if (S.cart.length && confirm('Remove all items from this bill?')) { resetBill(); show('vBill', false); } };
+
+function renderBill(){
+  $('lines').innerHTML = S.cart.map((l, i) => {
+    const it = S.bySku[l.sku];
+    return `<div class="line">
+      <div><div class="pname">${esc(it.name)}</div><div class="pmeta">${esc(it.colour)} · ${esc(it.size)} · ${fmt(it.price)} each</div></div>
+      <div class="lt num">${fmt(it.price * l.qty - l.lineDiscount)}${l.lineDiscount ? `<div class="pmeta">−${fmt(l.lineDiscount)} off</div>` : ''}</div>
+      <div class="line-actions">
+        <div class="stepper"><button data-dec="${i}" aria-label="One less">−</button><span class="num">${l.qty}</span><button data-inc="${i}" aria-label="One more">+</button></div>
+        <button class="link" data-disc="${i}">${l.lineDiscount ? 'Change discount' : 'Discount'}</button>
+        <button class="link danger" data-rm="${i}">Remove</button>
+      </div></div>`;
+  }).join('') || '<div class="empty">The bill is empty. Go back and tap a size to add it.</div>';
+  const lo = S.meta && S.meta.locations.find(l => l.id === S.loc);
+  $('billChan').innerHTML = S.channel === 'Partner'
+    ? `Partner shop <b>${esc(lo ? lo.name : '')}</b> · sale date <b>${esc(fmtDay(S.saleDate))}</b>`
+    : `Channel: <b>${esc(S.channel)}</b>`;
+  if (S.channel === 'Partner') {
+    S.payMode = 'Partner';
+    $('payModes').innerHTML = '<div class="note" style="grid-column:1/-1">Partner shop sale. The money comes to you through the monthly partner settlement, not at this counter.</div>';
+  } else {
+    if (S.payMode === 'Partner') S.payMode = 'UPI';
+    $('payModes').innerHTML = ['UPI', 'Cash', 'Card', 'Credit'].map(m =>
+      `<button aria-pressed="${m === S.payMode}" data-mode="${m}">${m}</button>`).join('');
+  }
+  renderTotals();
+}
+function renderTotals(){
+  const t = cartTotals();
+  $('totals').innerHTML = `<div><span>Items (${t.pcs} pcs)</span><span>${fmt(t.sub)}</span></div>` +
+    (t.bd ? `<div><span>Bill discount</span><span>${fmt(-t.bd)}</span></div>` : '') +
+    (t.credit ? `<div><span>Bill total</span><span>${fmt(t.total)}</span></div><div><span>Exchange credit</span><span>−${fmt(t.credit)}</span></div>` : '') +
+    `<div class="grand"><span>To collect</span><span>${fmt(t.credit ? t.collect : t.total)}</span></div>` +
+    (t.credit && t.collect < 0 ? `<div class="note" style="color:var(--bad)">Add items worth at least ${fmt(-t.collect)} more to use the full exchange credit.</div>` : '');
+  $('cbTotal').textContent = fmt(t.credit ? t.collect : t.total);
+  $('completeBtn').disabled = !S.cart.length || t.total < 0 || (t.credit && t.collect < 0);
+  renderBillBar();
+}
+$('lines').onclick = e => {
+  const b = e.target.closest('button'); if (!b) return;
+  const d = b.dataset;
+  if (d.inc) { const l = S.cart[d.inc]; if (!addToCart(l.sku, true)) return; }
+  if (d.dec) { const l = S.cart[d.dec]; l.qty--; if (l.qty < 1) S.cart.splice(d.dec, 1); }
+  if (d.rm)  S.cart.splice(d.rm, 1);
+  if (d.disc) {
+    const l = S.cart[d.disc], max = S.bySku[l.sku].price * l.qty;
+    const v = prompt(`Discount in ₹ for this line (max ${fmt(max)})`, l.lineDiscount || '');
+    if (v === null) return;
+    const n = Number(v); if (!(n >= 0 && n <= max)) return toast('Enter an amount between 0 and ' + fmt(max), true);
+    l.lineDiscount = n;
+  }
+  renderBill();
+};
+$('payModes').onclick = e => { const b = e.target.closest('[data-mode]'); if (!b) return; S.payMode = b.dataset.mode; renderBill(); };
+$('billDisc').addEventListener('input', renderTotals);
+
+$('completeBtn').onclick = async () => {
+  const t = cartTotals();
+  if (!S.cart.length) return;
+  if (t.bd > t.sub) return toast('Bill discount is more than the bill.', true);
+  S.clientId = S.clientId || (Date.now().toString(36) + Math.random().toString(36).slice(2));
+  show('busy', true);
+  try {
+    const r = await call('submitSale', S.token, {
+      clientId: S.clientId, items: S.cart, billDiscount: t.bd, paymentMode: S.channel === 'Partner' ? 'Partner' : S.payMode,
+      channel: S.channel, locationId: S.channel === 'Partner' ? S.loc : 'MAIN', saleDate: S.channel === 'Partner' ? S.saleDate : '',
+      customerName: $('custName').value.trim(), customerPhone: $('custPhone').value.trim(),
+      exchangeRef: S.exchange ? S.exchange.ref : '',
+    });
+    resetBill();
+    show('vBill', false);
+    showReceipt(r, true);
+    loadCatalog().catch(() => {});
+  } catch(e){ toast(e.message || 'Could not save the bill. Check the connection and tap Complete sale again.', true); }
+  show('busy', false);
+};
+function resetBill(){
+  S.cart = []; S.clientId = null; S.payMode = 'UPI'; S.exchange = null; renderExchangeBanner();
+  $('billDisc').value = ''; $('custName').value = ''; $('custPhone').value = '';
+  renderBillBar(); renderList();
+}
+
+function showReceipt(r, fresh){
+  S.lastReceipt = r;
+  $('rcptTitle').textContent = fresh ? 'Bill saved' : r.saleId;
+  const sub = r.items.reduce((s, i) => s + Number(i.lineTotal), 0);
+  $('receipt').innerHTML = `
+    <h3>${esc(r.shop.name)}</h3>
+    <div class="c">${esc(r.shop.addressLine)}<br>${esc(r.shop.phone)}</div><hr>
+    <div class="row sub"><span>${esc(r.saleId)}</span><span>${esc(r.dateTime)}</span></div>
+    ${r.channel && r.channel !== 'Shop' ? `<div class="sub">${r.channel === 'Partner' ? 'Partner shop: ' + esc(r.locationName) : 'Via ' + esc(r.channel)}</div>` : ''}
+    ${r.customerName ? `<div class="sub">Customer: ${esc(r.customerName)}</div>` : ''}<hr>
+    ${r.items.map(i => r.total < 0
+      ? `<div class="row"><span>${esc(i.name)}</span><span>${fmt(Math.abs(i.lineTotal))}</span></div>
+      <div class="sub">${esc(i.colour)} ${esc(i.size)} · ${Math.abs(i.qty)} returned</div>`
+      : `<div class="row"><span>${esc(i.name)}</span><span>${fmt(i.lineTotal)}</span></div>
+      <div class="sub">${esc(i.colour)} ${esc(i.size)} · ${i.qty} × ${fmt(i.price)}${Number(i.lineDiscount) ? ' − ' + fmt(i.lineDiscount) : ''}</div>`).join('')}
+    <hr>
+    ${r.billDiscount && r.total > 0 ? `<div class="row"><span>Subtotal</span><span>${fmt(sub)}</span></div>
+      <div class="row"><span>Discount</span><span>−${fmt(r.billDiscount)}</span></div>` : ''}
+    ${r.returnOf ? `<div class="sub">Return of bill ${esc(r.returnOf)}</div>` : ''}
+    <div class="row big"><span>${r.total < 0 ? (r.paymentMode === 'Exchange' ? 'Exchange credit' : 'Refund') : 'Total'}</span><span>${fmt(Math.abs(r.total))}</span></div>
+    ${r.exchangeCredit ? `<div class="row"><span>Exchange credit (${esc(r.exchangeRef)})</span><span>−${fmt(r.exchangeCredit)}</span></div>
+      <div class="row big"><span>Paid</span><span>${fmt(r.total - r.exchangeCredit)}</span></div>` : ''}
+    <div class="row sub"><span>Paid by ${esc(r.paymentMode)}</span><span>Prices incl. GST</span></div><hr>
+    <div class="c">${esc(r.shop.receiptFooter)}</div>`;
+  $('waBtn').classList.toggle('hidden', !r.customerPhone);
+  $('rcptReturnBtn').classList.toggle('hidden', !(r.total > 0));
+  show('vReceipt', true);
+}
+$('printBtn').onclick = () => printAs('receipt');
+$('waBtn').onclick = () => {
+  const r = S.lastReceipt; if (!r) return;
+  let ph = r.customerPhone.replace(/[^0-9]/g, '');
+  if (ph.length === 10) ph = r.shop.whatsappCountryCode + ph;
+  const lines = r.items.map(i => `${i.name} (${i.colour} ${i.size}) x${i.qty}: ${fmt(i.lineTotal)}`);
+  const text = [r.shop.name, `Bill ${r.saleId} · ${r.dateTime}`, '', ...lines,
+    ...(r.billDiscount ? [`Discount: −${fmt(r.billDiscount)}`] : []),
+    '', `Total: ${fmt(r.total)} (${r.paymentMode})`, r.shop.receiptFooter].join(NL);
+  window.open('https://wa.me/' + ph + '?text=' + encodeURIComponent(text), '_blank');
+};
+$('newSaleBtn').onclick = $('rcptBack').onclick = () => { show('vReceipt', false); $('q').focus(); };
+
+function setTab(which){
+  if (which === true) which = 'today';
+  if (which === false || !which) which = 'sell';
+  ['sell', 'today', 'more'].forEach(t => {
+    const id = 'tab' + t[0].toUpperCase() + t.slice(1);
+    $(id).setAttribute('aria-selected', t === which);
+    show('v' + t[0].toUpperCase() + t.slice(1), t === which);
+  });
+  show('billbar', which === 'sell');
+  if (which === 'today') loadToday();
+}
+$('tabSell').onclick = () => setTab('sell');
+$('tabToday').onclick = () => setTab('today');
+$('tabMore').onclick = () => setTab('more');
+
+async function loadToday(){
+  $('vToday').innerHTML = '<div class="empty">Loading today’s bills…</div>';
+  try {
+    const d = await call('getTodaySummary', S.token);
+    $('vToday').innerHTML = `
+      <div class="daytotal num"><div class="sub">${esc(d.scope)} · today</div>
+        <div class="amt">${fmt(d.total)}</div><div class="sub">${d.count} bill${d.count === 1 ? '' : 's'} · shop and online sales${(d.byChannel || {}).Partner !== undefined ? '. Partner shop entries are settled monthly and are not in this total.' : ''}</div>
+        <div class="modes">${Object.entries(d.byMode).map(([m, v]) => `<span>${esc(m)} ${fmt(v)}</span>`).join('')}</div>
+        <div class="modes">${Object.entries(d.byChannel || {}).map(([m, v]) => `<span>${esc(m)} ${fmt(v)}</span>`).join('')}</div></div>
+      ${d.bills.map(b => `<button class="bill num" data-sale="${esc(b.saleId)}">
+        <span><b>${esc(b.time)}</b> · ${esc(b.channel === 'Partner' ? 'Partner' : b.channel !== 'Shop' ? b.channel + ' · ' + b.paymentMode : b.paymentMode)}${b.forDate ? ' · sale of ' + esc(b.forDate) : ''}<br><span class="pmeta">${esc(b.saleId)}${b.customerName ? ' · ' + esc(b.customerName) : ''}</span></span>
+        <b class="${b.total < 0 ? 'neg' : ''}">${fmt(b.total)}</b></button>`).join('') ||
+        '<div class="empty">No bills yet today. Switch to Sell to make the first one.</div>'}`;
+  } catch(e){ $('vToday').innerHTML = `<div class="empty">${esc(e.message)}</div>`; }
+}
+$('vToday').onclick = async e => {
+  const b = e.target.closest('[data-sale]'); if (!b) return;
+  try { showReceipt(await call('getReceipt', S.token, b.dataset.sale), false); } catch(err){ toast(err.message, true); }
+};
+
+let scanner = null, lastCode = '', lastAt = 0;
+function loadScanner(){
+  if (window.Html5Qrcode) return Promise.resolve();
+  return new Promise(res => {
+    const sc = document.createElement('script');
+    sc.src = 'https://cdnjs.cloudflare.com/ajax/libs/html5-qrcode/2.3.8/html5-qrcode.min.js';
+    sc.onload = sc.onerror = () => res();
+    document.head.appendChild(sc);
+    setTimeout(res, 8000);
+  });
+}
+$('scanBtn').onclick = () => openScanner('sell');
+async function openScanner(target){
+  S.scanTarget = target;
+  show('vScan', true);
+  $('scanMsg').textContent = 'Starting camera…';
+  await loadScanner();
+  if (typeof Html5Qrcode === 'undefined') { $('scanMsg').textContent = 'The scanner didn’t load. Type the barcode in the search box, or use a Bluetooth scanner.'; return; }
+  try {
+    scanner = scanner || new Html5Qrcode('scanner', { formatsToSupport: [
+      Html5QrcodeSupportedFormats.EAN_13, Html5QrcodeSupportedFormats.CODE_128,
+      Html5QrcodeSupportedFormats.EAN_8, Html5QrcodeSupportedFormats.UPC_A, Html5QrcodeSupportedFormats.QR_CODE ] });
+    await scanner.start({ facingMode: 'environment' }, { fps: 10, qrbox: { width: 260, height: 140 } }, code => {
+      const now = Date.now();
+      if (code === lastCode && now - lastAt < 1500) return;
+      lastCode = code; lastAt = now;
+      const hit = S.byCode[code] || S.byCode[code.toUpperCase()];
+      if (hit) { if (onScanHit(hit, S.scanTarget)) $('scanMsg').textContent = `Added ${hit.name} · ${hit.colour} ${hit.size}`; }
+      else $('scanMsg').textContent = `No item with barcode ${code}. Check the Variants tab.`;
+    });
+  } catch(e){
+    const denied = /NotAllowed|Permission/i.test(String(e && (e.name || e.message) || e));
+    $('scanMsg').textContent = denied
+      ? 'Camera permission is blocked for this site. Tap the lock or settings icon next to the address, allow Camera, then tap Scan again.'
+      : 'Camera unavailable (' + (e.message || e) + '). Type the barcode in the search box, or use a Bluetooth scanner.';
+  }
+}
+$('scanClose').onclick = async () => {
+  if (scanner && scanner.isScanning) { try { await scanner.stop(); } catch(e){} }
+  show('vScan', false);
+  if (S.scanTarget === 'sell' && !$('vBill').classList.contains('hidden')) renderBill();
+};
+
+const wedge = { buf: '', last: 0 };
+document.addEventListener('keydown', e => {
+  const el = document.activeElement;
+  if (el && el.id === 'q') return;
+  if (el && /^(INPUT|TEXTAREA|SELECT)$/.test(el.tagName)) return;
+  if (!S.token || $('app').classList.contains('hidden')) return;
+  const now = Date.now();
+  if (now - wedge.last > 60) wedge.buf = '';
+  wedge.last = now;
+  if (e.key === 'Enter') {
+    const code = wedge.buf; wedge.buf = '';
+    if (code.length >= 4) {
+      const hit = S.byCode[code] || S.byCode[code.toUpperCase()];
+      const target = currentScanTarget();
+      if (!target) return;
+      if (hit) onScanHit(hit, target); else toast('No item with barcode ' + code, true);
+      e.preventDefault();
+    }
+  } else if (e.key.length === 1) {
+    wedge.buf += e.key;
+  }
+});
+
+</script>
+<script>
+const uid = () => Date.now().toString(36) + Math.random().toString(36).slice(2);
+const todayISO = () => { const d = new Date(); return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0'); };
+const isOpen = id => !$(id).classList.contains('hidden');
+const SHEETS = ['vBill', 'vReceipt', 'vReturn', 'vExpense', 'vStockIn', 'vNewProd', 'vLabels', 'vScan', 'vChannel', 'vTransfer', 'vPartners', 'vSettle', 'vOwners', 'vCapEntry', 'vImport'];
+
+async function loadMeta(){
+  S.meta = await call('getMeta', S.token);
+  S.channel = 'Shop'; S.loc = 'MAIN'; S.saleDate = todayISO();
+  renderChanBar();
+  document.querySelectorAll('.owner-only').forEach(el => el.classList.toggle('hidden', S.user.role !== 'Owner'));
+}
+
+function loadScript(src){
+  return new Promise(res => {
+    if (document.querySelector('script[src="' + src + '"]')) return res();
+    const sc = document.createElement('script');
+    sc.src = src; sc.onload = sc.onerror = () => res();
+    document.head.appendChild(sc);
+    setTimeout(res, 8000);
+  });
+}
+
+function printAs(kind){
+  document.body.dataset.print = kind;
+  window.print();
+}
+window.addEventListener('afterprint', () => { delete document.body.dataset.print; });
+
+function currentScanTarget(){
+  if (isOpen('vScan')) return null;
+  if (isOpen('vStockIn')) return 'stockin';
+  if (isOpen('vTransfer')) return 'transfer';
+  if (isOpen('vLabels')) return 'labels';
+  if (isOpen('vBill')) return 'sell';
+  if (SHEETS.some(isOpen)) return null;
+  return isOpen('vSell') ? 'sell' : null;
+}
+function onScanHit(hit, target){
+  if (target === 'stockin') return siAdd(hit.sku);
+  if (target === 'transfer') return trAdd(hit.sku);
+  if (target === 'labels') return lbAdd(hit.sku);
+  const ok = addToCart(hit.sku);
+  if (ok && isOpen('vBill')) renderBill();
+  return ok;
+}
+
+function itemMatches(q){
+  q = q.trim().toLowerCase();
+  if (!q) return [];
+  return S.items.filter(i => i.name.toLowerCase().includes(q) || i.sku.toLowerCase().includes(q) ||
+    i.barcode.includes(q) || (i.name + ' ' + i.colour + ' ' + i.size).toLowerCase().includes(q)).slice(0, 12);
+}
+function bindPicker(inputId, resultsId, onPick, locFn){
+  const where = () => (locFn ? locFn() : S.loc);
+  const render = () => {
+    const list = itemMatches($(inputId).value);
+    $(resultsId).innerHTML = list.map(i => `<button data-sku="${esc(i.sku)}"><span>${esc(i.name)}<br><span class="pmeta">${esc(i.colour)} · ${esc(i.size)}</span></span><span class="pmeta num">${stockAt(i, where())} in stock</span></button>`).join('');
+  };
+  $(inputId).addEventListener('input', render);
+  $(inputId).addEventListener('keydown', e => {
+    if (e.key !== 'Enter') return;
+    const code = $(inputId).value.trim();
+    const hit = S.byCode[code] || S.byCode[code.toUpperCase()];
+    const list = itemMatches(code);
+    const pick = hit || (list.length === 1 ? list[0] : null);
+    if (pick) { onPick(pick.sku); $(inputId).value = ''; render(); }
+  });
+  $(resultsId).onclick = e => {
+    const b = e.target.closest('[data-sku]'); if (!b) return;
+    onPick(b.dataset.sku); $(inputId).value = ''; render();
+  };
+}
+function seg(containerId, options, current, onChange){
+  $(containerId).innerHTML = options.map(o => `<button aria-pressed="${o === current}" data-v="${esc(o)}">${esc(o)}</button>`).join('');
+  $(containerId).onclick = e => { const b = e.target.closest('[data-v]'); if (b) onChange(b.dataset.v); };
+}
+
+$('mReturn').onclick = () => openReturn();
+$('mExpense').onclick = () => openExpense();
+$('mStockIn').onclick = () => openStockIn();
+$('mNewProd').onclick = () => openNewProd();
+$('mLabels').onclick = () => openLabels();
+
+/* ---------------- Exchange banner ---------------- */
+function renderExchangeBanner(){
+  const b = $('exBanner');
+  if (!S.exchange) { b.classList.add('hidden'); return; }
+  b.innerHTML = `<span><b>Exchange credit ${fmt(S.exchange.credit)}</b><br><span class="pmeta">From ${esc(S.exchange.ref)}. Add the new items; the credit comes off this bill.</span></span>
+    <button class="link danger" id="exDrop">Remove</button>`;
+  b.classList.remove('hidden');
+  $('exDrop').onclick = () => {
+    if (!confirm('Remove the exchange credit from this bill? It stays recorded in the sheet but will not be applied.')) return;
+    S.exchange = null; renderExchangeBanner(); renderBillBar();
+  };
+}
+
+/* ---------------- Returns ---------------- */
+const R = { sale: null, qty: {}, mode: 'Cash', clientId: null };
+function openReturn(saleId){
+  R.sale = null; R.qty = {}; R.mode = 'Cash'; R.clientId = null;
+  $('retQ').value = ''; $('retResults').innerHTML = ''; $('retReason').value = '';
+  show('retFind', true); show('retPick', false); show('retBar', false);
+  show('vReturn', true);
+  if (saleId) loadReturnBill(saleId); else $('retQ').focus();
+}
+$('retBack').onclick = () => {
+  if (isOpen('retPick') && !$('retQ').dataset.direct) { show('retPick', false); show('retBar', false); show('retFind', true); return; }
+  delete $('retQ').dataset.direct; show('vReturn', false);
+};
+async function findBills(){
+  const q = $('retQ').value.trim();
+  $('retResults').innerHTML = '<div class="note">Searching…</div>';
+  try {
+    const list = await call('searchBills', S.token, q);
+    $('retResults').innerHTML = list.map(b => `<button data-sale="${esc(b.saleId)}"><span><b>${esc(b.saleId)}</b><br><span class="pmeta">${esc(b.date)}${b.customerName ? ' · ' + esc(b.customerName) : ''}${b.customerPhone ? ' · ' + esc(b.customerPhone) : ''}</span></span><b class="num">${fmt(b.total)}</b></button>`).join('')
+      || '<div class="note">No bills found. Check the number, or search by the last digits of the customer’s mobile.</div>';
+  } catch(e){ $('retResults').innerHTML = `<div class="note" style="color:var(--bad)">${esc(e.message)}</div>`; }
+}
+$('retFindBtn').onclick = findBills;
+$('retQ').addEventListener('keydown', e => { if (e.key === 'Enter') findBills(); });
+$('retResults').onclick = e => { const b = e.target.closest('[data-sale]'); if (b) loadReturnBill(b.dataset.sale); };
+$('rcptReturnBtn').onclick = () => {
+  const id = S.lastReceipt && S.lastReceipt.saleId;
+  show('vReceipt', false);
+  $('retQ').dataset.direct = '1';
+  openReturn(id);
+};
+
+async function loadReturnBill(saleId){
+  show('retFind', false); show('retPick', true); show('retBar', false);
+  $('retHead').textContent = 'Loading bill…'; $('retLines').innerHTML = ''; $('retTotals').innerHTML = '';
+  try {
+    R.sale = await call('getSaleForReturn', S.token, saleId);
+    if (R.sale.channel === 'Partner') R.mode = 'Partner'; else if (R.mode === 'Partner') R.mode = 'Cash';
+    R.qty = {}; R.clientId = uid();
+    renderReturn();
+  } catch(e){ $('retHead').innerHTML = `<span style="color:var(--bad)">${esc(e.message)}</span>`; }
+}
+function returnTotal(){
+  return R.sale ? R.sale.lines.reduce((s, l) => s + (R.qty[l.sku] || 0) * l.refundPerPiece, 0) : 0;
+}
+function renderReturn(){
+  const s = R.sale;
+  $('retHead').innerHTML = `<b>${esc(s.saleId)}</b> · ${esc(s.dateTime)} · ${fmt(s.total)}${s.customerName ? ' · ' + esc(s.customerName) : ''}` +
+    (s.tooOld ? `<div style="color:var(--bad);margin-top:6px">This bill is ${s.ageDays} days old. Only the owner can accept returns after ${S.meta.returnDays} days.</div>` : '');
+  $('retLines').innerHTML = s.lines.map(l => {
+    const q = R.qty[l.sku] || 0;
+    return `<div class="line">
+      <div><div class="pname">${esc(l.name)}</div><div class="pmeta">${esc(l.colour)} · ${esc(l.size)} · bought ${l.qty}${l.returnedQty ? ', ' + l.returnedQty + ' already returned' : ''}</div>
+        <div class="pmeta">Refund ${fmt(l.refundPerPiece)} each (after discounts)</div></div>
+      <div class="lt num">${q ? fmt(q * l.refundPerPiece) : ''}</div>
+      <div class="line-actions">${l.returnableQty > 0 ? `
+        <div class="stepper"><button data-rdec="${esc(l.sku)}" aria-label="One less">−</button><span class="num">${q}</span><button data-rinc="${esc(l.sku)}" aria-label="One more">+</button></div>
+        <span class="pmeta">of ${l.returnableQty} returnable</span>` : '<span class="pmeta">Nothing left to return</span>'}</div></div>`;
+  }).join('');
+  seg('retModes', s.channel === 'Partner' ? ['Partner'] : ['Cash', 'UPI', 'Card', 'Exchange'], R.mode, v => { R.mode = v; renderReturn(); });
+  const t = returnTotal();
+  $('retTotals').innerHTML = `<div class="grand"><span>${R.mode === 'Exchange' ? 'Exchange credit' : 'Refund'}</span><span>${fmt(t)}</span></div>` +
+    (R.mode === 'Exchange' ? '<div class="note">The credit is applied to the next bill you make now.</div>' : '') +
+    (R.mode === 'Partner' ? '<div class="note">The partner shop dealt with the customer. This lowers that shop’s sales for the settlement and puts the pieces back in its stock.</div>' : '');
+  $('retSubmitLabel').textContent = R.mode === 'Exchange' ? 'Give exchange credit' : R.mode === 'Partner' ? 'Record return' : 'Refund by ' + R.mode;
+  $('retSubmitAmt').textContent = fmt(t);
+  $('retSubmit').disabled = !(t > 0) || s.tooOld;
+  show('retBar', true);
+}
+$('retLines').onclick = e => {
+  const b = e.target.closest('button'); if (!b) return;
+  const sku = b.dataset.rinc || b.dataset.rdec; if (!sku) return;
+  const l = R.sale.lines.find(x => x.sku === sku);
+  const q = (R.qty[sku] || 0) + (b.dataset.rinc ? 1 : -1);
+  R.qty[sku] = Math.max(0, Math.min(l.returnableQty, q));
+  renderReturn();
+};
+$('retSubmit').onclick = async () => {
+  const items = Object.keys(R.qty).filter(k => R.qty[k] > 0).map(k => ({ sku: k, qty: R.qty[k] }));
+  if (!items.length) return;
+  show('busy', true);
+  try {
+    const r = await call('submitReturn', S.token, { clientId: R.clientId, saleId: R.sale.saleId, items,
+      refundMode: R.mode, reason: $('retReason').value.trim() });
+    show('vReturn', false); delete $('retQ').dataset.direct;
+    loadCatalog().catch(() => {});
+    if (R.mode === 'Exchange') {
+      S.exchange = { ref: r.saleId, credit: Math.abs(r.total) };
+      renderExchangeBanner(); setTab('sell'); renderBillBar();
+      toast('Exchange credit ' + fmt(Math.abs(r.total)) + ' ready. Add the new items.');
+    } else {
+      showReceipt(r, true);
+    }
+  } catch(e){ toast(e.message, true); }
+  show('busy', false);
+};
+
+/* ---------------- Expenses ---------------- */
+const X = { mode: 'Cash', clientId: null, paidBy: 'Business' };
+function openExpense(){
+  X.mode = 'Cash'; X.clientId = uid(); X.paidBy = 'Business';
+  renderPaidBy('expPaidByBox', 'expPaidBy', () => X.paidBy, v => { X.paidBy = v; });
+  $('expDate').value = todayISO(); $('expDate').max = todayISO();
+  $('expAmt').value = ''; $('expNotes').value = '';
+  $('expCat').innerHTML = '<option value="">Choose…</option>' + S.meta.expenseCategories.map(c => `<option>${esc(c)}</option>`).join('');
+  renderExpModes(); updExpAmt();
+  show('vExpense', true);
+  loadExpenses();
+}
+function renderExpModes(){ seg('expModes', ['Cash', 'UPI', 'Card'], X.mode, v => { X.mode = v; renderExpModes(); }); }
+function updExpAmt(){ $('expSaveAmt').textContent = Number($('expAmt').value) > 0 ? fmt($('expAmt').value) : ''; }
+$('expAmt').addEventListener('input', updExpAmt);
+$('expBack').onclick = () => show('vExpense', false);
+async function loadExpenses(){
+  $('expList').innerHTML = '<div class="note">Loading…</div>';
+  try {
+    const d = await call('listExpenses', S.token);
+    $('expListHead').textContent = `This month · ${d.scope} · ${fmt(d.total)}`;
+    $('expList').innerHTML = d.items.map(x => `<div class="bill num" style="cursor:default"><span><b>${esc(x.category)}</b> · ${esc(x.date)}<br><span class="pmeta">${esc(x.paymentMode)}${x.paidBy ? ' · paid by ' + esc(x.paidBy) : ''}${x.notes ? ' · ' + esc(x.notes) : ''}</span></span><b>${fmt(x.amount)}</b></div>`).join('')
+      || '<div class="note">No expenses recorded this month yet.</div>';
+  } catch(e){ $('expList').innerHTML = `<div class="note">${esc(e.message)}</div>`; }
+}
+$('expSave').onclick = async () => {
+  if (!$('expCat').value) return toast('Choose a category', true);
+  if (!(Number($('expAmt').value) > 0)) return toast('Enter the amount', true);
+  show('busy', true);
+  try {
+    await call('submitExpense', S.token, { clientId: X.clientId, date: $('expDate').value, category: $('expCat').value,
+      amount: Number($('expAmt').value), paymentMode: X.mode, notes: $('expNotes').value.trim(), paidBy: paidById(X.paidBy) });
+    toast('Expense saved');
+    X.clientId = uid(); X.paidBy = 'Business'; renderPaidBy('expPaidByBox', 'expPaidBy', () => X.paidBy, v => { X.paidBy = v; });
+    $('expAmt').value = ''; $('expNotes').value = ''; $('expCat').value = ''; updExpAmt();
+    loadExpenses();
+  } catch(e){ toast(e.message, true); }
+  show('busy', false);
+};
+
+/* ---------------- Stock in ---------------- */
+const SI = { lines: [], clientId: null, paidBy: 'Business' };
+function openStockIn(prefillSkus){
+  SI.clientId = uid(); SI.paidBy = 'Business';
+  renderPaidBy('siPaidByBox', 'siPaidBy', () => SI.paidBy, v => { SI.paidBy = v; });
+  if (prefillSkus) SI.lines = prefillSkus.map(sku => ({ sku, qty: '', cost: (S.bySku[sku] || {}).cost || 0 }));
+  const sup = JSON.parse(store.get('pos.suppliers') || '[]');
+  $('siSuppliers').innerHTML = sup.map(x => `<option value="${esc(x)}">`).join('');
+  renderStockIn();
+  show('vStockIn', true);
+  if (prefillSkus) toast('Enter the quantity received for each new item');
+}
+function siAdd(sku){
+  const it = S.bySku[sku]; if (!it) return false;
+  const l = SI.lines.find(x => x.sku === sku);
+  if (l) l.qty = (Number(l.qty) || 0) + 1; else SI.lines.push({ sku, qty: 1, cost: it.cost || 0 });
+  toast(`Added ${it.name} · ${it.colour} ${it.size}`);
+  renderStockIn();
+  return true;
+}
+function renderStockIn(){
+  $('siLines').innerHTML = SI.lines.map((l, i) => {
+    const it = S.bySku[l.sku] || { name: l.sku, colour: '', size: '', stk: {} };
+    return `<div class="line">
+      <div><div class="pname">${esc(it.name)}</div><div class="pmeta">${esc(it.colour)} · ${esc(it.size)} · now ${stockAt(it, 'MAIN')} in main stock</div></div>
+      <div class="lt num" data-sitot="${i}">${fmt((Number(l.qty) || 0) * (Number(l.cost) || 0))}</div>
+      <div class="line-actions">
+        <label class="pmeta">Qty <input class="mini" type="number" inputmode="numeric" min="0" data-siq="${i}" value="${esc(l.qty)}"></label>
+        <label class="pmeta">Cost ₹ <input class="mini" type="number" inputmode="decimal" min="0" data-sic="${i}" value="${esc(l.cost)}"></label>
+        <button class="link danger" data-sirm="${i}">Remove</button>
+      </div></div>`;
+  }).join('') || '<div class="empty">Search or scan the items in this delivery.</div>';
+  siTotals();
+}
+function siTotals(){
+  const pcs = SI.lines.reduce((s, l) => s + (Number(l.qty) || 0), 0);
+  const tot = SI.lines.reduce((s, l) => s + (Number(l.qty) || 0) * (Number(l.cost) || 0), 0);
+  $('siSaveLabel').textContent = pcs ? `Save stock in · ${pcs} pcs` : 'Save stock in';
+  $('siSaveAmt').textContent = fmt(tot);
+  $('siSave').disabled = !pcs;
+}
+$('siLines').addEventListener('input', e => {
+  const t = e.target;
+  const i = t.dataset.siq !== undefined ? t.dataset.siq : t.dataset.sic;
+  if (i === undefined) return;
+  if (t.dataset.siq !== undefined) SI.lines[i].qty = t.value; else SI.lines[i].cost = t.value;
+  const el = document.querySelector('[data-sitot="' + i + '"]');
+  if (el) el.textContent = fmt((Number(SI.lines[i].qty) || 0) * (Number(SI.lines[i].cost) || 0));
+  siTotals();
+});
+$('siLines').addEventListener('click', e => {
+  const b = e.target.closest('[data-sirm]'); if (!b) return;
+  SI.lines.splice(Number(b.dataset.sirm), 1); renderStockIn();
+});
+bindPicker('siQ', 'siResults', siAdd, () => 'MAIN');
+$('siScan').onclick = () => openScanner('stockin');
+$('siBack').onclick = () => {
+  if (SI.lines.length && !confirm('Leave without saving? The items you added stay here until you sign out.')) return;
+  show('vStockIn', false);
+};
+$('siNewProd').onclick = () => openNewProd();
+$('siSave').onclick = async () => {
+  const supplier = $('siSupplier').value.trim();
+  if (!supplier) return toast('Enter the supplier name', true);
+  const items = SI.lines.filter(l => Number(l.qty) > 0).map(l => ({ sku: l.sku, qty: Math.floor(Number(l.qty)), unitCost: Number(l.cost) || 0 }));
+  if (!items.length) return toast('Enter quantities', true);
+  show('busy', true);
+  try {
+    const r = await call('submitPurchase', S.token, { clientId: SI.clientId, supplier, invoiceNo: $('siInvoice').value.trim(),
+      items, updateCostPrice: $('siUpdCost').checked, paidBy: paidById(SI.paidBy) });
+    const sup = JSON.parse(store.get('pos.suppliers') || '[]').filter(x => x !== supplier);
+    store.set('pos.suppliers', JSON.stringify([supplier, ...sup].slice(0, 20)));
+    SI.lines = []; SI.clientId = uid(); $('siInvoice').value = '';
+    await loadCatalog();
+    show('vStockIn', false);
+    const pcs = r.items.reduce((s, i) => s + i.qty, 0);
+    toast(`Saved ${r.purchaseId}: ${pcs} pcs, ${fmt(r.total)}`);
+    if (confirm(`Stock saved (${pcs} pieces). Print barcode labels for them now?`)) openLabels(r.items);
+  } catch(e){ toast(e.message, true); }
+  show('busy', false);
+};
+
+/* ---------------- New product ---------------- */
+function openNewProd(){
+  ['npName', 'npSizes', 'npColours', 'npPrice', 'npCost', 'npBrand', 'npHsn'].forEach(id => $(id).value = '');
+  $('npReorder').value = 5; $('npGst').value = 5;
+  $('npCat').innerHTML = '<option value="">Choose…</option>' + S.meta.productCategories.map(c => `<option>${esc(c)}</option>`).join('');
+  $('npSizeChips').innerHTML = ['S, M, L, XL', 'S, M, L, XL, XXL', '28, 30, 32, 34, 36', '2-3Y, 4-5Y, 6-7Y, 8-9Y', 'Free']
+    .map(x => `<button data-sz="${esc(x)}">${esc(x)}</button>`).join('');
+  npPreview();
+  show('vNewProd', true);
+  $('npName').focus();
+}
+const splitList = v => v.split(',').map(x => x.trim()).filter(Boolean);
+function npPreview(){
+  const n = splitList($('npSizes').value).length * splitList($('npColours').value).length;
+  $('npPreview').textContent = n ? `Creates ${n} item${n > 1 ? 's' : ''} (each size in each colour), each with its own barcode.` : '';
+}
+['npSizes', 'npColours'].forEach(id => $(id).addEventListener('input', npPreview));
+$('npSizeChips').onclick = e => { const b = e.target.closest('[data-sz]'); if (b) { $('npSizes').value = b.dataset.sz; npPreview(); } };
+$('npBack').onclick = () => show('vNewProd', false);
+$('npSave').onclick = async () => {
+  show('busy', true);
+  try {
+    const r = await call('createProduct', S.token, {
+      name: $('npName').value.trim(), category: $('npCat').value, brand: $('npBrand').value.trim(), hsn: $('npHsn').value.trim(),
+      gstPct: $('npGst').value, price: Number($('npPrice').value), cost: Number($('npCost').value),
+      sizes: splitList($('npSizes').value), colours: splitList($('npColours').value), reorderLevel: Number($('npReorder').value) || 0,
+    });
+    await loadCatalog();
+    show('vNewProd', false);
+    openStockIn(r.skus);
+  } catch(e){ toast(e.message, true); }
+  show('busy', false);
+};
+
+/* ---------------- Labels ---------------- */
+const LB = { lines: [], format: store.get('pos.labelFormat') || 'A4 sheet' };
+function openLabels(items){
+  if (items) items.forEach(i => { const l = LB.lines.find(x => x.sku === i.sku); if (l) l.copies += i.qty; else LB.lines.push({ sku: i.sku, copies: i.qty }); });
+  renderLabels();
+  show('vLabels', true);
+}
+function lbAdd(sku){
+  if (!S.bySku[sku]) return false;
+  const l = LB.lines.find(x => x.sku === sku);
+  if (l) l.copies++; else LB.lines.push({ sku, copies: 1 });
+  renderLabels();
+  return true;
+}
+function renderLabels(){
+  $('lbLines').innerHTML = LB.lines.map((l, i) => {
+    const it = S.bySku[l.sku] || { name: l.sku, colour: '', size: '', barcode: '' };
+    return `<div class="line">
+      <div><div class="pname">${esc(it.name)}</div><div class="pmeta">${esc(it.colour)} · ${esc(it.size)} · code ${esc(it.barcode || it.sku)}</div></div>
+      <div></div>
+      <div class="line-actions">
+        <div class="stepper"><button data-lbdec="${i}" aria-label="One less">−</button><span class="num">${l.copies}</span><button data-lbinc="${i}" aria-label="One more">+</button></div>
+        <span class="pmeta">labels</span><button class="link danger" data-lbrm="${i}">Remove</button>
+      </div></div>`;
+  }).join('') || '<div class="empty">Add the items you want labels for.</div>';
+  seg('lbFormat', ['A4 sheet', 'Label roll'], LB.format, v => { LB.format = v; store.set('pos.labelFormat', v); renderLabels(); });
+  const n = LB.lines.reduce((s, l) => s + l.copies, 0);
+  $('lbCount').textContent = n ? n + ' label' + (n > 1 ? 's' : '') : '';
+  $('lbPrint').disabled = !n;
+}
+$('lbLines').onclick = e => {
+  const b = e.target.closest('button'); if (!b) return;
+  const d = b.dataset;
+  if (d.lbinc) LB.lines[d.lbinc].copies++;
+  if (d.lbdec) { LB.lines[d.lbdec].copies--; if (LB.lines[d.lbdec].copies < 1) LB.lines.splice(d.lbdec, 1); }
+  if (d.lbrm) LB.lines.splice(d.lbrm, 1);
+  renderLabels();
+};
+bindPicker('lbQ', 'lbResults', lbAdd);
+$('lbScan').onclick = () => openScanner('labels');
+$('lbAll').onclick = () => { S.items.forEach(i => { if (!LB.lines.find(x => x.sku === i.sku)) LB.lines.push({ sku: i.sku, copies: 1 }); }); renderLabels(); };
+$('lbClear').onclick = () => { if (LB.lines.length && confirm('Remove all items from the label list?')) { LB.lines = []; renderLabels(); } };
+$('lbBack').onclick = () => show('vLabels', false);
+$('lbPrint').onclick = async () => {
+  $('lbPrint').disabled = true;
+  await loadScript('https://cdnjs.cloudflare.com/ajax/libs/jsbarcode/3.11.6/JsBarcode.all.min.js');
+  $('lbPrint').disabled = false;
+  if (typeof JsBarcode === 'undefined') return toast('The barcode tool did not load. Check the internet connection and try again.', true);
+  const roll = LB.format === 'Label roll';
+  const wrap = document.createElement('div');
+  wrap.className = roll ? 'roll' : 'a4grid';
+  let made = 0;
+  LB.lines.forEach(l => {
+    const it = S.bySku[l.sku]; if (!it) return;
+    const code = it.barcode || it.sku;
+    for (let k = 0; k < l.copies; k++) {
+      const d = document.createElement('div');
+      d.className = 'lbl';
+      if (!roll) { d.style.width = '63.5mm'; d.style.height = '33.9mm'; }
+      d.innerHTML = `<div class="ls">${esc(S.shop.name)}</div><div class="ln">${esc(it.name)}</div>
+        <div class="lv">${esc(it.colour)} · ${esc(it.size)}</div><svg></svg><div class="lp">${fmt(it.price)}</div>`;
+      try {
+        JsBarcode(d.querySelector('svg'), code, { format: 'CODE128', height: roll ? 26 : 30, width: roll ? 1.3 : 1.4,
+          displayValue: true, fontSize: 9, margin: 0, textMargin: 0 });
+      } catch(err){ d.querySelector('svg').outerHTML = `<div class="lv">Bad code: ${esc(code)}</div>`; }
+      wrap.appendChild(d); made++;
+    }
+  });
+  $('labelSheet').innerHTML = ''; $('labelSheet').appendChild(wrap);
+  $('pageStyle').textContent = roll ? '@page { size: 50mm 25mm; margin: 0; }' : '@page { size: A4; margin: 13mm 7mm; }';
+  if (made) printAs('labels');
+};
+
+/* ---------------- Sales channel ---------------- */
+const fmtDay = iso => {
+  const d = new Date(iso + 'T12:00:00');
+  return d.toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: d.getFullYear() === new Date().getFullYear() ? undefined : 'numeric' });
+};
+const partners = () => (S.meta ? S.meta.locations.filter(l => l.type === 'Partner') : []);
+function renderChanBar(){
+  const lo = S.meta && S.meta.locations.find(l => l.id === S.loc);
+  $('chanText').innerHTML = S.channel === 'Partner'
+    ? `Partner shop <b>${esc(lo ? lo.name : '')}</b> · <b>${esc(fmtDay(S.saleDate))}</b>`
+    : `Selling via <b>${esc(S.channel)}</b>`;
+  $('chanBar').classList.toggle('alt', S.channel !== 'Shop');
+}
+function applyChannel(ch, locId){
+  const newLoc = ch === 'Partner' ? locId : 'MAIN';
+  if (ch === 'Partner' && !newLoc) return false;
+  if (S.exchange && ch === 'Partner') { toast('Finish the exchange first, or remove the exchange credit.', true); return false; }
+  if (S.cart.length && newLoc !== S.loc) {
+    if (!confirm('Switching stock location clears the current bill. Continue?')) return false;
+    S.cart = []; S.clientId = null;
+  }
+  S.channel = ch; S.loc = newLoc;
+  if (ch === 'Partner') store.set('pos.partner', newLoc);
+  renderChanBar(); renderBillBar(); renderList();
+  return true;
+}
+function renderChannelSheet(){
+  const ps = partners();
+  seg('chSeg', S.meta.channels, S.channel, v => {
+    if (v === 'Partner') {
+      if (!ps.length) return toast('No partner shops yet. The owner can add one under More → Partner shops.', true);
+      const last = store.get('pos.partner');
+      applyChannel('Partner', (ps.find(p => p.id === last) || ps[0]).id);
+    } else applyChannel(v);
+    renderChannelSheet();
+  });
+  $('chNote').textContent = S.channel === 'Partner' ? '' :
+    S.channel === 'Shop' ? 'Walk-in sales at your own shop. Stock comes from Main stock.' :
+    S.channel + ' orders are sold from Main stock, the same stock as the shop.';
+  show('chPartner', S.channel === 'Partner');
+  if (S.channel === 'Partner') {
+    $('chLoc').innerHTML = ps.map(p => `<option value="${esc(p.id)}">${esc(p.name)}</option>`).join('');
+    $('chLoc').value = S.loc;
+    $('chDate').value = S.saleDate; $('chDate').max = todayISO();
+  }
+}
+$('chanBar').onclick = () => { renderChannelSheet(); show('vChannel', true); };
+$('chBack').onclick = () => show('vChannel', false);
+$('chLoc').onchange = () => { if (!applyChannel('Partner', $('chLoc').value)) $('chLoc').value = S.loc; };
+$('chDate').onchange = () => { if ($('chDate').value) { S.saleDate = $('chDate').value; renderChanBar(); } };
+
+/* ---------------- Transfer stock ---------------- */
+const TR = { lines: [], clientId: null };
+$('mTransfer').onclick = () => {
+  TR.lines = []; TR.clientId = uid();
+  const opts = S.meta.locations.map(l => `<option value="${esc(l.id)}">${esc(l.name)}</option>`).join('');
+  $('trFrom').innerHTML = opts; $('trTo').innerHTML = opts;
+  $('trFrom').value = 'MAIN'; $('trTo').value = (partners()[0] || { id: 'MAIN' }).id;
+  renderTransfer(); show('vTransfer', true);
+};
+function trAdd(sku){
+  const it = S.bySku[sku]; if (!it) return false;
+  const have = stockAt(it, $('trFrom').value);
+  const l = TR.lines.find(x => x.sku === sku);
+  const want = (l ? Number(l.qty) || 0 : 0) + 1;
+  if (want > have) { toast(`Only ${have} of ${it.name} ${it.colour} ${it.size} at the source`, true); return false; }
+  if (l) l.qty = want; else TR.lines.push({ sku, qty: 1 });
+  toast(`Added ${it.name} · ${it.colour} ${it.size}`);
+  renderTransfer();
+  return true;
+}
+function renderTransfer(){
+  const from = $('trFrom').value;
+  $('trLines').innerHTML = TR.lines.map((l, i) => {
+    const it = S.bySku[l.sku] || { name: l.sku, colour: '', size: '', stk: {} };
+    return `<div class="line">
+      <div><div class="pname">${esc(it.name)}</div><div class="pmeta">${esc(it.colour)} · ${esc(it.size)} · ${stockAt(it, from)} available here</div></div><div></div>
+      <div class="line-actions"><label class="pmeta">Qty <input class="mini" type="number" inputmode="numeric" min="1" data-trq="${i}" value="${esc(l.qty)}"></label>
+        <button class="link danger" data-trrm="${i}">Remove</button></div></div>`;
+  }).join('') || (partners().length ? '<div class="empty">Search or scan the pieces you are moving.</div>'
+                                    : '<div class="empty">No partner shops yet. Add one under More → Partner shops first.</div>');
+  trTotals();
+}
+function trTotals(){
+  const pcs = TR.lines.reduce((s, l) => s + (Number(l.qty) || 0), 0);
+  const same = $('trFrom').value === $('trTo').value;
+  $('trSaveLabel').textContent = same ? 'Choose two different places' : pcs ? `Move ${pcs} piece${pcs > 1 ? 's' : ''}` : 'Transfer';
+  $('trSave').disabled = !pcs || same;
+}
+$('trFrom').onchange = $('trTo').onchange = () => { renderTransfer(); $('trResults').innerHTML = ''; };
+$('trLines').addEventListener('input', e => { if (e.target.dataset.trq !== undefined) { TR.lines[e.target.dataset.trq].qty = e.target.value; trTotals(); } });
+$('trLines').addEventListener('click', e => { const b = e.target.closest('[data-trrm]'); if (b) { TR.lines.splice(Number(b.dataset.trrm), 1); renderTransfer(); } });
+bindPicker('trQ', 'trResults', trAdd, () => $('trFrom').value);
+$('trScan').onclick = () => openScanner('transfer');
+$('trBack').onclick = () => { if (TR.lines.length && !confirm('Leave without saving this transfer?')) return; show('vTransfer', false); };
+$('trSave').onclick = async () => {
+  const items = TR.lines.filter(l => Number(l.qty) > 0).map(l => ({ sku: l.sku, qty: Math.floor(Number(l.qty)) }));
+  show('busy', true);
+  try {
+    const r = await call('submitTransfer', S.token, { clientId: TR.clientId, from: $('trFrom').value, to: $('trTo').value, items });
+    TR.lines = []; TR.clientId = uid();
+    await loadCatalog();
+    show('vTransfer', false);
+    toast(`Moved ${r.pieces} pieces to ${r.to} (${r.transferId})`);
+  } catch(e){ toast(e.message, true); }
+  show('busy', false);
+};
+
+/* ---------------- Partner shops ---------------- */
+$('mPartners').onclick = () => { show('vPartners', true); loadPartners(); };
+$('paBack').onclick = () => show('vPartners', false);
+async function loadPartners(){
+  $('paList').innerHTML = '<div class="empty">Loading…</div>';
+  try {
+    const list = await call('getPartnerOverview', S.token);
+    $('paList').innerHTML = list.map(p => `<div class="pcard num">
+      <h3>${esc(p.name)}${p.active ? '' : ' (inactive)'}</h3>
+      <div class="pmeta">Keeps ${esc(String(Math.round(p.commissionPct * 10000) / 100))}% of sales · rent ${fmt(p.monthlyRent)} a month</div>
+      <div class="kv"><span>Pieces in their shop</span><b>${p.units}</b></div>
+      <div class="kv"><span>Stock value at cost</span><b>${fmt(p.valueCost)}</b></div>
+      <div class="kv"><span>Stock value at selling price</span><b>${fmt(p.valueMrp)}</b></div>
+      <div class="kv"><span>Sales this month (net of returns)</span><b>${fmt(p.monthSales)}</b></div>
+      ${p.items.length ? `<details><summary>See what is in their shop</summary><div class="stocklist">${p.items.map(i =>
+        `<div><span>${esc(i.name)} · ${esc(i.colour)} ${esc(i.size)}</span><b>${i.qty}</b></div>`).join('')}</div></details>` : ''}
+      <div class="btnrow"><button class="link" data-pedit="${esc(p.id)}">Edit terms</button>
+        ${p.active && !p.units ? `<button class="link danger" data-poff="${esc(p.id)}">Deactivate</button>` : ''}</div></div>`).join('')
+      || '<div class="empty">No partner shops yet. Add the first one below.</div>';
+    S.partnerList = list;
+  } catch(e){ $('paList').innerHTML = `<div class="empty">${esc(e.message)}</div>`; }
+}
+$('paList').onclick = async e => {
+  const ed = e.target.closest('[data-pedit]'), off = e.target.closest('[data-poff]');
+  try {
+    if (ed) {
+      const p = S.partnerList.find(x => x.id === ed.dataset.pedit);
+      const pct = prompt('Their share of sales (%)', Math.round(p.commissionPct * 10000) / 100); if (pct === null) return;
+      const rent = prompt('Monthly rent (₹)', p.monthlyRent); if (rent === null) return;
+      await call('updateLocation', S.token, { id: p.id, commissionPct: Number(pct), monthlyRent: Number(rent) });
+      toast('Terms updated. They apply to settlements you save from now on.');
+    } else if (off) {
+      if (!confirm('Deactivate this partner shop? It disappears from the channel list.')) return;
+      await call('updateLocation', S.token, { id: off.dataset.poff, active: false });
+    } else return;
+    await loadMeta(); loadPartners();
+  } catch(err){ toast(err.message, true); }
+};
+$('paAdd').onclick = async () => {
+  show('busy', true);
+  try {
+    await call('createLocation', S.token, { name: $('paName').value.trim(), commissionPct: Number($('paPct').value), monthlyRent: Number($('paRent').value) || 0 });
+    $('paName').value = ''; $('paRent').value = '';
+    await loadMeta(); await loadPartners();
+    toast('Partner shop added. Use Transfer stock to send it pieces.');
+  } catch(e){ toast(e.message, true); }
+  show('busy', false);
+};
+
+/* ---------------- Partner settlement ---------------- */
+const SE = { preview: null, rentMode: 'UPI' };
+const MONTHS = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
+$('mSettle').onclick = () => {
+  const ps = partners();
+  $('seLoc').innerHTML = ps.map(p => `<option value="${esc(p.id)}">${esc(p.name)}</option>`).join('');
+  const now = new Date(), prev = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+  $('seMonth').innerHTML = MONTHS.map((m, i) => `<option value="${i + 1}">${m}</option>`).join('');
+  $('seYear').innerHTML = [now.getFullYear(), now.getFullYear() - 1, now.getFullYear() - 2].map(y => `<option>${y}</option>`).join('');
+  $('seMonth').value = prev.getMonth() + 1; $('seYear').value = prev.getFullYear();
+  show('vSettle', true);
+  if (!ps.length) { $('sePreview').innerHTML = '<div class="empty">No partner shops yet.</div>'; show('seBar', false); }
+  else loadSettlePreview();
+  loadSettleList();
+};
+$('seBack').onclick = () => show('vSettle', false);
+const seYm = () => $('seYear').value + '-' + String($('seMonth').value).padStart(2, '0');
+['seLoc', 'seMonth', 'seYear'].forEach(id => $(id).onchange = () => loadSettlePreview());
+function renderRentModes(){
+  seg('seRentMode', ['UPI', 'Cash', 'Card', 'Partner'], SE.rentMode, v => { SE.rentMode = v; renderRentModes(); });
+}
+async function loadSettlePreview(){
+  $('sePreview').innerHTML = '<div class="empty">Working it out…</div>'; show('seBar', false);
+  try {
+    const p = SE.preview = await call('partnerPreview', S.token, $('seLoc').value, seYm());
+    const pct = Math.round(p.commissionPct * 10000) / 100;
+    const head = `<div class="totals num">
+      <div><span>Sales (net of returns) · ${p.bills} bill${p.bills === 1 ? '' : 's'}</span><span>${fmt(p.gross)}</span></div>
+      ${p.returns ? `<div class="pmeta"><span>includes returns of ${fmt(p.returns)}</span><span></span></div>` : ''}
+      <div><span>Their ${pct}%</span><span>${fmt(-p.commission)}</span></div>
+      <div class="grand"><span>They owe you</span><span>${fmt(p.netReceivable)}</span></div></div>`;
+    if (p.saved) {
+      const out = Math.round((p.saved.netReceivable - p.saved.received) * 100) / 100;
+      $('sePreview').innerHTML = head + `<div class="banner" style="margin-top:12px"><span><b>Already settled.</b> Rent ${fmt(p.saved.rent)} and commission ${fmt(p.saved.commission)} are in Expenses.<br>
+        Received ${fmt(p.saved.received)} · still due ${fmt(out)}</span></div>` +
+        (out > 0 ? `<button class="link" data-pay="${esc(p.saved.id)}" data-out="${out}">Record money received</button>` : '');
+      show('seBar', false);
+    } else {
+      $('sePreview').innerHTML = head + `
+        <div class="grid2" style="margin-top:12px">
+          <div class="field"><label for="seRent">Rent this month (₹)</label><input id="seRent" type="number" inputmode="decimal" min="0" value="${p.rent}"></div>
+          <div class="field"><label for="seRecv">Received so far (₹)</label><input id="seRecv" type="number" inputmode="decimal" min="0" value="0"></div>
+        </div>
+        <div class="field"><label>Rent paid by</label><div class="seg" id="seRentMode"></div></div>
+        <p class="note">Saving books the commission and the rent as expenses in that month, so profit reports include them. Nothing is changed in the shop’s sales.</p>`;
+      renderRentModes();
+      $('seSaveLabel').textContent = 'Save settlement';
+      show('seBar', true);
+    }
+  } catch(e){ $('sePreview').innerHTML = `<div class="empty">${esc(e.message)}</div>`; }
+}
+$('sePreview').onclick = async e => {
+  const b = e.target.closest('[data-pay]'); if (!b) return;
+  const v = prompt('Amount received from the partner shop (₹). Still due: ' + b.dataset.out);
+  if (v === null) return;
+  try { await call('recordPartnerPayment', S.token, { settlementId: b.dataset.pay, amount: Number(v) }); toast('Payment recorded'); loadSettlePreview(); loadSettleList(); }
+  catch(err){ toast(err.message, true); }
+};
+$('seSave').onclick = async () => {
+  const p = SE.preview; if (!p) return;
+  const rent = Number($('seRent').value) || 0;
+  if (!confirm(`Save ${MONTHS[$('seMonth').value - 1]} ${$('seYear').value} for ${p.name}?\n\nCommission ${fmt(p.commission)} and rent ${fmt(rent)} will be added to Expenses.`)) return;
+  show('busy', true);
+  try {
+    await call('saveSettlement', S.token, { locationId: p.locationId, ym: p.ym, rent, rentMode: SE.rentMode, received: Number($('seRecv').value) || 0 });
+    toast('Settlement saved');
+    await loadSettlePreview(); loadSettleList();
+  } catch(e){ toast(e.message, true); }
+  show('busy', false);
+};
+async function loadSettleList(){
+  try {
+    const d = await call('listSettlements', S.token);
+    $('seListHead').textContent = 'Settlements · still due from partners ' + fmt(d.totalOutstanding);
+    $('seList').innerHTML = d.items.map(x => `<div class="bill num" style="cursor:default"><span><b>${esc(x.name)}</b> · ${esc(x.ym)}<br>
+      <span class="pmeta">Sales ${fmt(x.gross)} · commission ${fmt(x.commission)} · rent ${fmt(x.rent)}</span></span>
+      <span style="text-align:right"><b class="${x.outstanding > 0 ? 'neg' : ''}">${x.outstanding > 0 ? 'Due ' + fmt(x.outstanding) : 'Paid'}</b>
+      ${x.outstanding > 0 ? `<br><button class="link" data-pay2="${esc(x.id)}" data-out="${x.outstanding}">Record payment</button>` : ''}</span></div>`).join('')
+      || '<div class="note">No settlements saved yet.</div>';
+  } catch(e){ $('seList').innerHTML = `<div class="note">${esc(e.message)}</div>`; }
+}
+$('seList').onclick = async e => {
+  const b = e.target.closest('[data-pay2]'); if (!b) return;
+  const v = prompt('Amount received (₹). Still due: ' + b.dataset.out); if (v === null) return;
+  try { await call('recordPartnerPayment', S.token, { settlementId: b.dataset.pay2, amount: Number(v) }); toast('Payment recorded'); loadSettleList(); loadSettlePreview(); }
+  catch(err){ toast(err.message, true); }
+};
+
+/* ---------------- Owners' capital accounts ---------------- */
+const paidByOptions = () => ['Business'].concat((S.meta.owners || []).map(o => o.name));
+const paidById = label => label === 'Business' ? 'Business' : ((S.meta.owners || []).find(o => o.name === label) || {}).id || 'Business';
+function renderPaidBy(boxId, segId, getCur, setCur){
+  const has = S.user.role === 'Owner' && S.meta && (S.meta.owners || []).length > 0;
+  show(boxId, has);
+  if (!has) return;
+  seg(segId, paidByOptions(), getCur(), v => { setCur(v); renderPaidBy(boxId, segId, getCur, setCur); });
+}
+
+const OW = { period: 'month', data: null };
+const OW_LABELS = { month: 'Month', fy: 'Year (Apr–Mar)', all: 'All time' };
+const CE_LABEL = { Contribution: 'Capital in', Drawing: 'Drawing', Reimbursement: 'Reimburse' };
+const CE = { type: 'Contribution', mode: 'Bank transfer', clientId: null };
+const isoOf = d => d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
+function owRange(kind){
+  const n = new Date();
+  if (kind === 'month') return { from: isoOf(new Date(n.getFullYear(), n.getMonth(), 1)), to: isoOf(new Date(n.getFullYear(), n.getMonth() + 1, 1)) };
+  if (kind === 'fy') { const y = n.getMonth() >= 3 ? n.getFullYear() : n.getFullYear() - 1; return { from: y + '-04-01', to: (y + 1) + '-04-01' }; }
+  return { from: '', to: '' };
+}
+$('mOwners').onclick = () => {
+  if (!S.meta.ownersReady) return toast('First run “Set up owners’ capital accounts” from the POS menu in the spreadsheet, then redeploy.', true);
+  show('vOwners', true); loadOwners();
+};
+$('owBack').onclick = () => show('vOwners', false);
+async function loadOwners(){
+  seg('owPeriod', Object.values(OW_LABELS), OW_LABELS[OW.period], v => {
+    OW.period = Object.keys(OW_LABELS).find(k => OW_LABELS[k] === v); loadOwners();
+  });
+  $('owBody').innerHTML = '<div class="empty">Working it out…</div>';
+  try { OW.data = await call('getOwnersSummary', S.token, owRange(OW.period)); renderOwners(); }
+  catch(e){ $('owBody').innerHTML = `<div class="empty">${esc(e.message)}</div>`; }
+}
+function renderOwners(){
+  const d = OW.data, pr = d.period, pct = x => Math.round(x * 10000) / 100;
+  const top = d.owners.reduce((m, o) => o.contributed > m.contributed ? o : m, d.owners[0] || { contributed: 0, name: '' });
+  const gaps = d.owners.filter(o => o.gapToHighest > 0.5);
+  $('owBody').innerHTML = `
+    <div class="daytotal num"><div class="sub">Business profit · ${esc(OW_LABELS[OW.period].toLowerCase())}</div>
+      <div class="amt">${fmt(pr.profit)}</div>
+      <div class="sub">Sales ${fmt(pr.revenue)} − cost of goods ${fmt(pr.cogs)} − expenses ${fmt(pr.expenses)}</div>
+      <div class="modes">${d.owners.map(o => `<span>${esc(o.name)} ${pct(o.sharePct)}% = ${fmt(o.sharePeriod)}</span>`).join('')}</div></div>
+    ${Math.abs(d.shareTotal - 1) > 0.0001 ? `<div class="banner"><span><b>Profit shares add up to ${pct(d.shareTotal)}%, not 100%.</b> Fix them in the Owners tab of the spreadsheet.</span></div>` : ''}
+    ${gaps.length ? `<div class="banner"><span><b>Capital is not equal yet.</b> ${gaps.map(o => `${esc(o.name)} has put in ${fmt(o.gapToHighest)} less than ${esc(top.name)}`).join('. ')}.</span></div>` : ''}
+    ${d.owners.map(o => `<div class="pcard num">
+      <h3>${esc(o.name)}</h3><div class="pmeta">Profit share ${pct(o.sharePct)}%</div>
+      <div class="kv"><span>Capital put in</span><b>${fmt(o.contributed)}</b></div>
+      <div class="kv"><span>Drawings</span><b>${fmt(-o.drawings)}</b></div>
+      <div class="kv"><span>Share of profit to date (all time)</span><b>${fmt(o.shareToDate)}</b></div>
+      <div class="kv big"><span>Capital account balance</span><b>${fmt(o.balance)}</b></div>
+      ${o.owed > 0 ? `<div class="kv" style="margin-top:6px"><span>Business owes ${esc(o.name)} for costs paid personally</span><b>${fmt(o.owed)}</b></div>` : ''}
+      <div class="btnrow"><button class="link" data-ce="Contribution:${esc(o.id)}">+ Capital in</button>
+        <button class="link" data-ce="Drawing:${esc(o.id)}">+ Drawing</button>
+        ${o.owed > 0 ? `<button class="link" data-ce="Reimbursement:${esc(o.id)}">+ Reimburse</button>` : ''}</div></div>`).join('')}
+    <h3 style="margin:18px 0 8px;font-size:16px">Recent entries</h3>
+    ${d.ledger.map(r => `<div class="bill num" style="cursor:default"><span><b>${esc(r.owner)}</b> · ${esc(CE_LABEL[r.type] || r.type)}<br>
+      <span class="pmeta">${esc(r.date)} · ${esc(r.paymentMode)}${r.notes ? ' · ' + esc(r.notes) : ''}</span></span><b>${fmt(r.amount)}</b></div>`).join('')
+      || '<div class="note">No capital entries yet. Tap “Add entry” to record each owner’s capital.</div>'}
+    <p class="note">Profit is sales minus cost of goods and expenses, worked out the same way as the Reports tab. Profit an owner has not drawn stays in their capital account. A wrong entry can be corrected in the CapitalLedger tab of the spreadsheet.</p>`;
+}
+$('owBody').onclick = e => {
+  const b = e.target.closest('[data-ce]'); if (!b) return;
+  const [type, id] = b.dataset.ce.split(':'); openCapEntry(type, id);
+};
+$('owAdd').onclick = () => openCapEntry('Contribution', ((OW.data && OW.data.owners[0]) || {}).id);
+function owedOf(id){ const o = OW.data && OW.data.owners.find(x => x.id === id); return o ? o.owed : 0; }
+function openCapEntry(type, ownerId){
+  CE.type = type || 'Contribution'; CE.clientId = uid();
+  $('ceOwner').innerHTML = OW.data.owners.map(o => `<option value="${esc(o.id)}">${esc(o.name)}</option>`).join('');
+  if (ownerId) $('ceOwner').value = ownerId;
+  $('ceAmt').value = CE.type === 'Reimbursement' ? owedOf($('ceOwner').value) || '' : '';
+  $('ceDate').value = todayISO(); $('ceDate').max = todayISO(); $('ceNotes').value = '';
+  renderCe(); show('vCapEntry', true);
+}
+function renderCe(){
+  seg('ceType', ['Capital in', 'Drawing', 'Reimburse'], CE_LABEL[CE.type], v => {
+    CE.type = Object.keys(CE_LABEL).find(k => CE_LABEL[k] === v);
+    if (CE.type === 'Reimbursement' && !$('ceAmt').value) $('ceAmt').value = owedOf($('ceOwner').value) || '';
+    renderCe();
+  });
+  seg('ceMode', ['Bank transfer', 'UPI', 'Cash', 'Cheque'], CE.mode, v => { CE.mode = v; renderCe(); });
+  const name = ($('ceOwner').selectedOptions[0] || {}).text || 'the owner';
+  $('ceHelp').textContent =
+    CE.type === 'Contribution' ? `Money ${name} puts into the business. It adds to their capital.` :
+    CE.type === 'Drawing' ? `Money ${name} takes out for personal use. It is not a business expense, and it lowers their capital account.` :
+    `The business pays ${name} back for costs they paid from their own pocket. The business owes ${name} ${fmt(owedOf($('ceOwner').value))} right now.`;
+  $('ceSaveLabel').textContent = { Contribution: 'Save capital', Drawing: 'Save drawing', Reimbursement: 'Save reimbursement' }[CE.type];
+  $('ceSaveAmt').textContent = Number($('ceAmt').value) > 0 ? fmt($('ceAmt').value) : '';
+}
+$('ceOwner').onchange = renderCe;
+$('ceAmt').addEventListener('input', renderCe);
+$('ceBack').onclick = () => show('vCapEntry', false);
+$('ceSave').onclick = async () => {
+  if (!(Number($('ceAmt').value) > 0)) return toast('Enter the amount', true);
+  show('busy', true);
+  try {
+    await call('submitCapitalEntry', S.token, { clientId: CE.clientId, ownerId: $('ceOwner').value, type: CE.type,
+      amount: Number($('ceAmt').value), date: $('ceDate').value, paymentMode: CE.mode, notes: $('ceNotes').value.trim() });
+    toast('Entry saved');
+    show('vCapEntry', false); await loadOwners();
+  } catch(e){ toast(e.message, true); }
+  show('busy', false);
+};
+
+/* ---------------- Import products from a spreadsheet ---------------- */
+const XLSX_URL = 'https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js';
+const IM_FIELDS = {
+  name: ['productname', 'product', 'itemname', 'name', 'title'],
+  category: ['category', 'productcategory', 'categoryname'],
+  brand: ['brand'],
+  hsn: ['hsn', 'hsncode'],
+  gst: ['gst', 'gstpct', 'gstrate', 'gstpercent', 'tax', 'taxrate'],
+  colour: ['colour', 'color'],
+  size: ['size'],
+  sku: ['sku', 'itemcode'],
+  barcode: ['barcode', 'ean', 'upc', 'barcodenumber'],
+  cost: ['cost', 'costprice', 'purchaseprice', 'buyingprice'],
+  price: ['price', 'sellingprice', 'mrp', 'saleprice', 'retailprice'],
+  reorder: ['reorder', 'reorderlevel', 'minstock', 'minimumstock'],
+  qty: ['qty', 'quantity', 'openingqty', 'openingstock', 'openingquantity', 'stock'],
+};
+const IM_TEXT = ['name', 'category', 'brand', 'hsn', 'colour', 'size', 'sku', 'barcode'];
+const IM_BY_HEADER = {};
+Object.keys(IM_FIELDS).forEach(f => IM_FIELDS[f].forEach(h => { IM_BY_HEADER[h] = f; }));
+const imNorm = h => String(h == null ? '' : h).toLowerCase().replace(/[^a-z0-9]/g, '');
+const IM = { rows: [], clientId: null, fileName: '', ignored: [] };
+
+$('mImport').onclick = () => {
+  IM.rows = []; $('imFile').value = ''; $('imResult').innerHTML = ''; show('imBar', false);
+  show('vImport', true);
+};
+$('imBack').onclick = () => show('vImport', false);
+
+function imParse(grid){
+  let headerAt = -1, cols = {};
+  for (let i = 0; i < Math.min(grid.length, 15) && headerAt < 0; i++) {
+    const m = {};
+    grid[i].forEach((h, c) => { const f = IM_BY_HEADER[imNorm(h)]; if (f && m[f] === undefined) m[f] = c; });
+    if (m.name !== undefined && (m.price !== undefined || m.cost !== undefined)) { headerAt = i; cols = m; }
+  }
+  if (headerAt < 0) throw new Error('I could not find the Product Name and Selling Price columns. Please use the template, with its headings in the first row.');
+  const known = Object.values(cols);
+  IM.ignored = grid[headerAt].map((h, c) => ({ h: String(h || '').trim(), c })).filter(x => x.h && known.indexOf(x.c) < 0).map(x => x.h);
+  const rows = [];
+  for (let i = headerAt + 1; i < grid.length; i++) {
+    const g = grid[i];
+    if (g.every(v => String(v == null ? '' : v).trim() === '')) continue;
+    const o = { row: i + 1 };
+    Object.keys(IM_FIELDS).forEach(f => {
+      let v = cols[f] === undefined ? '' : g[cols[f]];
+      if (v == null) v = '';
+      if (IM_TEXT.indexOf(f) >= 0) v = typeof v === 'number' ? String(v) : String(v).trim();
+      o[f] = v;
+    });
+    rows.push(o);
+  }
+  return rows;
+}
+
+async function imReadFile(file){
+  await loadScript(XLSX_URL);
+  if (typeof XLSX === 'undefined') throw new Error('The spreadsheet reader did not load. Check the internet connection and try again.');
+  const wb = XLSX.read(await file.arrayBuffer(), { type: 'array' });
+  const name = wb.SheetNames.find(n => /^products?$/i.test(n)) || wb.SheetNames[0];
+  return XLSX.utils.sheet_to_json(wb.Sheets[name], { header: 1, raw: true, defval: '' });
+}
+
+async function imCheck(){
+  if (!IM.rows.length) return;
+  IM.clientId = uid();
+  $('imResult').innerHTML = '<div class="empty">Checking ' + IM.rows.length + ' rows…</div>'; show('imBar', false);
+  try {
+    const r = await call('importProducts', S.token, { dryRun: true, rows: IM.rows,
+      updateExisting: $('imUpdate').checked, createCategories: $('imCats').checked });
+    renderImport(r);
+  } catch(e){ $('imResult').innerHTML = `<div class="errbox">${esc(e.message)}</div>`; }
+}
+
+function renderImport(r){
+  const s = r.summary;
+  const line = (a, b) => `<div><span>${a}</span><span>${b}</span></div>`;
+  let html = r.errorCount ? `<div class="totals num">${line('Rows read from ' + esc(IM.fileName), s.rows)}</div>` : `<div class="totals num">
+    ${line('Rows read from ' + esc(IM.fileName), s.rows)}
+    ${line('New products', s.newProducts)}
+    ${line('New items (size and colour)', s.newItems)}
+    ${s.updated ? line('Existing items updated', s.updated) : ''}
+    ${s.skipped ? line('Existing items skipped', s.skipped) : ''}
+    ${line('Opening stock', s.openingPieces + ' pcs · ' + fmt(s.openingValue) + ' at cost')}
+    ${s.newCategories.length ? line('New categories', esc(s.newCategories.join(', '))) : ''}</div>`;
+  if (r.errorCount) {
+    html += `<div class="errbox"><b>${r.errorCount} problem${r.errorCount > 1 ? 's' : ''} to fix. Nothing has been imported.</b><ul>` +
+      r.errors.slice(0, 30).map(e => `<li>Row ${e.row}: ${esc(e.message)}</li>`).join('') + '</ul>' +
+      (r.errorCount > 30 ? `<div class="pmeta">…and ${r.errorCount - 30} more. Fix these, then choose the file again.</div>` : '<div class="pmeta">Fix these in your file, then choose it again.</div>') + '</div>';
+  }
+  if (r.warningCount) {
+    html += `<details class="okbox"><summary><b>${r.warningCount} note${r.warningCount > 1 ? 's' : ''}</b></summary><ul>` +
+      r.warnings.slice(0, 30).map(w => `<li>Row ${w.row}: ${esc(w.message)}</li>`).join('') + '</ul></details>';
+  }
+  if (IM.ignored.length) html += `<p class="note">Columns not used: ${esc(IM.ignored.join(', '))}</p>`;
+  $('imResult').innerHTML = html;
+  const todo = s.newItems + s.updated;
+  $('imGo').disabled = !r.ok || todo < 1;
+  $('imGoLabel').textContent = r.ok ? (todo ? `Import ${s.newItems ? s.newItems + ' new item' + (s.newItems > 1 ? 's' : '') : ''}${s.newItems && s.updated ? ' and ' : ''}${s.updated ? 'update ' + s.updated : ''}` : 'Nothing new to import') : 'Fix the problems first';
+  show('imBar', true);
+}
+
+$('imFile').onchange = async () => {
+  const f = $('imFile').files[0]; if (!f) return;
+  IM.fileName = f.name; IM.rows = [];
+  $('imResult').innerHTML = '<div class="empty">Reading the file…</div>'; show('imBar', false);
+  try {
+    IM.rows = imParse(await imReadFile(f));
+    if (!IM.rows.length) throw new Error('I found the headings but no product rows under them.');
+    if (IM.rows.length > 500) throw new Error('This file has ' + IM.rows.length + ' rows. Please import at most 500 at a time.');
+    await imCheck();
+  } catch(e){ IM.rows = []; $('imResult').innerHTML = `<div class="errbox">${esc(e.message)}</div>`; }
+};
+$('imCats').onchange = $('imUpdate').onchange = imCheck;
+
+$('imGo').onclick = async () => {
+  show('busy', true);
+  try {
+    const r = await call('importProducts', S.token, { clientId: IM.clientId, rows: IM.rows,
+      updateExisting: $('imUpdate').checked, createCategories: $('imCats').checked });
+    if (!r.ok) { renderImport(r); toast('Some rows have problems. Nothing was imported.', true); }
+    else {
+      await loadCatalog();
+      S.meta.productCategories = (await call('getMeta', S.token)).productCategories;
+      const sm = r.summary;
+      IM.rows = []; $('imFile').value = ''; show('imBar', false);
+      $('imResult').innerHTML = `<div class="okbox"><b>Imported.</b> ${sm.newProducts} new product${sm.newProducts === 1 ? '' : 's'}, ${sm.newItems} new item${sm.newItems === 1 ? '' : 's'}${sm.updated ? ', ' + sm.updated + ' updated' : ''}${sm.openingPieces ? ', ' + sm.openingPieces + ' pieces of opening stock added to Main stock' : ''}.</div>`;
+      toast('Import complete');
+      if (r.items.length && confirm('Print barcode labels for the ' + r.items.length + ' new item' + (r.items.length > 1 ? 's' : '') + ' now?')) {
+        show('vImport', false); openLabels(r.items.map(i => ({ sku: i.sku, qty: Math.max(1, i.qty) })));
+      }
+    }
+  } catch(e){ toast(e.message, true); }
+  show('busy', false);
+};
+
+boot().catch(e => showFatal('Startup failed: ' + (e.message || e)));
+</script>
+</body>
+</html>
