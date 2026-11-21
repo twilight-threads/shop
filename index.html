@@ -164,6 +164,8 @@
   .inrow input{flex:1;min-width:0;border:1.5px solid var(--line);border-radius:10px;padding:12px;background:#fff}
   .inrow button{border:0;border-radius:10px;background:var(--indigo);color:#fff;padding:0 14px;font-weight:600}
   .mini{width:84px!important;padding:8px!important;text-align:right}
+  .inrow .seg button{background:#fff;color:var(--ink);border:1.5px solid var(--line);padding:12px 0;font-weight:600}
+  .inrow .seg button[aria-pressed=true]{background:var(--indigo);color:#fff;border-color:var(--indigo)}
   .chips{display:flex;flex-wrap:wrap;gap:6px;margin-top:6px}
   .chips button{border:1.5px solid var(--line);background:#fff;border-radius:999px;padding:4px 10px;font-size:13px}
   .check{display:flex;gap:10px;align-items:center;font-size:15px;margin:12px 0}
@@ -353,7 +355,10 @@
       <div class="inrow"><input id="siQ" type="search" autocomplete="off" placeholder="Search or scan"><button id="siScan">Scan</button></div></div>
     <div class="results" id="siResults"></div>
     <div id="siLines"></div>
-    <label class="check"><input type="checkbox" id="siUpdCost" checked> Update cost price in the sheet to these costs</label>
+    <div class="field"><label for="siDisc">Supplier discount on the whole invoice (optional)</label>
+      <div class="inrow"><input id="siDisc" type="number" inputmode="decimal" min="0" placeholder="0"><div class="seg" id="siDiscType" style="width:116px;grid-template-columns:1fr 1fr"></div></div></div>
+    <div class="totals num hidden" id="siSummary"></div>
+    <label class="check"><input type="checkbox" id="siUpdCost" checked> Update cost price in the sheet to these costs (after any discount)</label>
   </div>
   <div class="billbar"><button id="siSave"><span id="siSaveLabel">Save stock in</span><span class="num" id="siSaveAmt"></span></button></div>
 </section>
@@ -402,6 +407,7 @@
       <div class="field"><label for="trFrom">From</label><select id="trFrom"></select></div>
       <div class="field"><label for="trTo">To</label><select id="trTo"></select></div>
     </div>
+    <p class="note hidden" id="trNote"></p>
     <div class="field"><label for="trQ">Add items</label>
       <div class="inrow"><input id="trQ" type="search" autocomplete="off" placeholder="Search or scan"><button id="trScan">Scan</button></div></div>
     <div class="results" id="trResults"></div>
@@ -485,6 +491,16 @@
   <div class="billbar hidden" id="imBar"><button id="imGo"><span id="imGoLabel">Import</span><span></span></button></div>
 </section>
 
+<!-- Partner shop prices -->
+<section id="vPrices" class="sheet hidden" aria-label="Partner shop prices">
+  <div class="sheet-head"><button class="icon-btn" id="prBack">Back</button><h2 id="prTitle">Prices</h2></div>
+  <div class="wrap">
+    <p class="note">What customers pay at this shop. Items without a special price follow your own-shop price. Typing the own-shop price removes the special price.</p>
+    <div id="prLines"></div>
+  </div>
+  <div class="billbar"><button id="prSave"><span id="prSaveLabel">Save prices</span><span></span></button></div>
+</section>
+
 <!-- Labels -->
 <section id="vLabels" class="sheet hidden" aria-label="Barcode labels">
   <div class="sheet-head"><button class="icon-btn" id="lbBack">Back</button><h2>Barcode labels</h2><button class="link danger" id="lbClear">Clear</button></div>
@@ -553,6 +569,7 @@ const S = { token: store.get('pos.token'), user: null, shop: null, items: [], by
             cart: [], cat: 'All', open: {}, payMode: 'UPI', lastReceipt: null, channel: 'Shop', loc: 'MAIN', saleDate: '' };
 const stockAt = (i, loc) => (i.stk && i.stk[loc]) || 0;
 const stockOf = i => stockAt(i, S.loc);
+const priceOf = (i, loc) => { const L = loc || S.loc; return (i.lp && i.lp[L] > 0) ? i.lp[L] : i.price; };
 
 async function call(fn, ...args){
   const url = window.POS_CONFIG.API_URL;
@@ -679,7 +696,7 @@ function renderList(){
     const vs = groups[pid], p = vs[0];
     const open = q || S.open[pid] || ids.length === 1;
     const total = vs.reduce((s, v) => s + stockOf(v), 0);
-    const prices = [...new Set(vs.map(v => v.price))];
+    const prices = [...new Set(vs.map(v => priceOf(v)))];
     const colours = {};
     vs.forEach(v => (colours[v.colour] = colours[v.colour] || []).push(v));
     return `<div class="prod">
@@ -716,7 +733,7 @@ function addToCart(sku, silent){
   return true;
 }
 function cartTotals(){
-  const sub = S.cart.reduce((s, l) => s + S.bySku[l.sku].price * l.qty - (l.lineDiscount || 0), 0);
+  const sub = S.cart.reduce((s, l) => s + priceOf(S.bySku[l.sku]) * l.qty - (l.lineDiscount || 0), 0);
   const bd = Math.max(0, Number($('billDisc').value) || 0);
   const credit = S.exchange ? S.exchange.credit : 0;
   return { sub, bd, total: sub - bd, credit, collect: sub - bd - credit, pcs: S.cart.reduce((s, l) => s + l.qty, 0) };
@@ -735,8 +752,8 @@ function renderBill(){
   $('lines').innerHTML = S.cart.map((l, i) => {
     const it = S.bySku[l.sku];
     return `<div class="line">
-      <div><div class="pname">${esc(it.name)}</div><div class="pmeta">${esc(it.colour)} · ${esc(it.size)} · ${fmt(it.price)} each</div></div>
-      <div class="lt num">${fmt(it.price * l.qty - l.lineDiscount)}${l.lineDiscount ? `<div class="pmeta">−${fmt(l.lineDiscount)} off</div>` : ''}</div>
+      <div><div class="pname">${esc(it.name)}</div><div class="pmeta">${esc(it.colour)} · ${esc(it.size)} · ${fmt(priceOf(it))} each</div></div>
+      <div class="lt num">${fmt(priceOf(it) * l.qty - l.lineDiscount)}${l.lineDiscount ? `<div class="pmeta">−${fmt(l.lineDiscount)} off</div>` : ''}</div>
       <div class="line-actions">
         <div class="stepper"><button data-dec="${i}" aria-label="One less">−</button><span class="num">${l.qty}</span><button data-inc="${i}" aria-label="One more">+</button></div>
         <button class="link" data-disc="${i}">${l.lineDiscount ? 'Change discount' : 'Discount'}</button>
@@ -775,7 +792,7 @@ $('lines').onclick = e => {
   if (d.dec) { const l = S.cart[d.dec]; l.qty--; if (l.qty < 1) S.cart.splice(d.dec, 1); }
   if (d.rm)  S.cart.splice(d.rm, 1);
   if (d.disc) {
-    const l = S.cart[d.disc], max = S.bySku[l.sku].price * l.qty;
+    const l = S.cart[d.disc], max = priceOf(S.bySku[l.sku]) * l.qty;
     const v = prompt(`Discount in ₹ for this line (max ${fmt(max)})`, l.lineDiscount || '');
     if (v === null) return;
     const n = Number(v); if (!(n >= 0 && n <= max)) return toast('Enter an amount between 0 and ' + fmt(max), true);
@@ -959,7 +976,7 @@ document.addEventListener('keydown', e => {
 const uid = () => Date.now().toString(36) + Math.random().toString(36).slice(2);
 const todayISO = () => { const d = new Date(); return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0'); };
 const isOpen = id => !$(id).classList.contains('hidden');
-const SHEETS = ['vBill', 'vReceipt', 'vReturn', 'vExpense', 'vStockIn', 'vNewProd', 'vLabels', 'vScan', 'vChannel', 'vTransfer', 'vPartners', 'vSettle', 'vOwners', 'vCapEntry', 'vImport'];
+const SHEETS = ['vBill', 'vReceipt', 'vReturn', 'vExpense', 'vStockIn', 'vNewProd', 'vLabels', 'vScan', 'vChannel', 'vTransfer', 'vPartners', 'vSettle', 'vOwners', 'vCapEntry', 'vImport', 'vPrices'];
 
 async function loadMeta(){
   S.meta = await call('getMeta', S.token);
@@ -1190,9 +1207,9 @@ $('expSave').onclick = async () => {
 };
 
 /* ---------------- Stock in ---------------- */
-const SI = { lines: [], clientId: null, paidBy: 'Business' };
+const SI = { lines: [], clientId: null, paidBy: 'Business', discType: 'amount' };
 function openStockIn(prefillSkus){
-  SI.clientId = uid(); SI.paidBy = 'Business';
+  SI.clientId = uid(); SI.paidBy = 'Business'; SI.discType = 'amount'; $('siDisc').value = ''; renderDiscType();
   renderPaidBy('siPaidByBox', 'siPaidBy', () => SI.paidBy, v => { SI.paidBy = v; });
   if (prefillSkus) SI.lines = prefillSkus.map(sku => ({ sku, qty: '', cost: (S.bySku[sku] || {}).cost || 0 }));
   const sup = JSON.parse(store.get('pos.suppliers') || '[]');
@@ -1223,12 +1240,30 @@ function renderStockIn(){
   }).join('') || '<div class="empty">Search or scan the items in this delivery.</div>';
   siTotals();
 }
+function siMoney(){
+  const sub = SI.lines.reduce((t, l) => t + (Number(l.qty) || 0) * (Number(l.cost) || 0), 0);
+  const v = Number($('siDisc').value) || 0;
+  const bad = v > 0 && (SI.discType === 'percent' ? v >= 100 : v >= sub);
+  let disc = bad || v <= 0 ? 0 : (SI.discType === 'percent' ? sub * v / 100 : v);
+  disc = Math.round(disc * 100) / 100;
+  return { sub: Math.round(sub * 100) / 100, v, bad, disc, net: Math.round((sub - disc) * 100) / 100 };
+}
+function renderDiscType(){
+  seg('siDiscType', ['₹', '%'], SI.discType === 'percent' ? '%' : '₹', v => { SI.discType = v === '%' ? 'percent' : 'amount'; renderDiscType(); siTotals(); });
+}
 function siTotals(){
-  const pcs = SI.lines.reduce((s, l) => s + (Number(l.qty) || 0), 0);
-  const tot = SI.lines.reduce((s, l) => s + (Number(l.qty) || 0) * (Number(l.cost) || 0), 0);
+  const pcs = SI.lines.reduce((t, l) => t + (Number(l.qty) || 0), 0);
+  const m = siMoney();
   $('siSaveLabel').textContent = pcs ? `Save stock in · ${pcs} pcs` : 'Save stock in';
-  $('siSaveAmt').textContent = fmt(tot);
-  $('siSave').disabled = !pcs;
+  $('siSaveAmt').textContent = fmt(m.net);
+  $('siSave').disabled = !pcs || m.bad;
+  const showBox = pcs > 0 && m.v > 0;
+  show('siSummary', showBox);
+  if (showBox) $('siSummary').innerHTML = m.bad
+    ? '<div class="note" style="color:var(--bad)">The discount must be less than the invoice amount.</div>'
+    : `<div><span>Items</span><span>${fmt(m.sub)}</span></div><div><span>Supplier discount${SI.discType === 'percent' ? ' (' + m.v + '%)' : ''}</span><span>${fmt(-m.disc)}</span></div>
+       <div class="grand"><span>To pay the supplier</span><span>${fmt(m.net)}</span></div>
+       <div class="note">The discount is spread across the items, so each piece’s cost, and your profit, reflect the lower price.</div>`;
 }
 $('siLines').addEventListener('input', e => {
   const t = e.target;
@@ -1245,6 +1280,7 @@ $('siLines').addEventListener('click', e => {
 });
 bindPicker('siQ', 'siResults', siAdd, () => 'MAIN');
 $('siScan').onclick = () => openScanner('stockin');
+$('siDisc').addEventListener('input', siTotals);
 $('siBack').onclick = () => {
   if (SI.lines.length && !confirm('Leave without saving? The items you added stay here until you sign out.')) return;
   show('vStockIn', false);
@@ -1258,14 +1294,15 @@ $('siSave').onclick = async () => {
   show('busy', true);
   try {
     const r = await call('submitPurchase', S.token, { clientId: SI.clientId, supplier, invoiceNo: $('siInvoice').value.trim(),
-      items, updateCostPrice: $('siUpdCost').checked, paidBy: paidById(SI.paidBy) });
+      items, updateCostPrice: $('siUpdCost').checked, paidBy: paidById(SI.paidBy),
+      discount: Number($('siDisc').value) > 0 ? { type: SI.discType, value: Number($('siDisc').value) } : undefined });
     const sup = JSON.parse(store.get('pos.suppliers') || '[]').filter(x => x !== supplier);
     store.set('pos.suppliers', JSON.stringify([supplier, ...sup].slice(0, 20)));
     SI.lines = []; SI.clientId = uid(); $('siInvoice').value = '';
     await loadCatalog();
     show('vStockIn', false);
     const pcs = r.items.reduce((s, i) => s + i.qty, 0);
-    toast(`Saved ${r.purchaseId}: ${pcs} pcs, ${fmt(r.total)}`);
+    toast(`Saved ${r.purchaseId}: ${pcs} pcs, ${fmt(r.total)}` + (r.discount ? ` after ${fmt(r.discount)} discount` : ''));
     if (confirm(`Stock saved (${pcs} pieces). Print barcode labels for them now?`)) openLabels(r.items);
   } catch(e){ toast(e.message, true); }
   show('busy', false);
@@ -1308,7 +1345,7 @@ $('npSave').onclick = async () => {
 /* ---------------- Labels ---------------- */
 const LB = { lines: [], format: store.get('pos.labelFormat') || 'A4 sheet' };
 function openLabels(items){
-  if (items) items.forEach(i => { const l = LB.lines.find(x => x.sku === i.sku); if (l) l.copies += i.qty; else LB.lines.push({ sku: i.sku, copies: i.qty }); });
+  if (items) items.forEach(i => { const l = LB.lines.find(x => x.sku === i.sku); if (l) { l.copies += i.qty; if (i.price) l.price = i.price; } else LB.lines.push({ sku: i.sku, copies: i.qty, price: i.price || null }); });
   renderLabels();
   show('vLabels', true);
 }
@@ -1323,7 +1360,7 @@ function renderLabels(){
   $('lbLines').innerHTML = LB.lines.map((l, i) => {
     const it = S.bySku[l.sku] || { name: l.sku, colour: '', size: '', barcode: '' };
     return `<div class="line">
-      <div><div class="pname">${esc(it.name)}</div><div class="pmeta">${esc(it.colour)} · ${esc(it.size)} · code ${esc(it.barcode || it.sku)}</div></div>
+      <div><div class="pname">${esc(it.name)}</div><div class="pmeta">${esc(it.colour)} · ${esc(it.size)} · code ${esc(it.barcode || it.sku)}${l.price ? ' · tag price ' + fmt(l.price) : ''}</div></div>
       <div></div>
       <div class="line-actions">
         <div class="stepper"><button data-lbdec="${i}" aria-label="One less">−</button><span class="num">${l.copies}</span><button data-lbinc="${i}" aria-label="One more">+</button></div>
@@ -1365,7 +1402,7 @@ $('lbPrint').onclick = async () => {
       d.className = 'lbl';
       if (!roll) { d.style.width = '63.5mm'; d.style.height = '33.9mm'; }
       d.innerHTML = `<div class="ls">${esc(S.shop.name)}</div><div class="ln">${esc(it.name)}</div>
-        <div class="lv">${esc(it.colour)} · ${esc(it.size)}</div><svg></svg><div class="lp">${fmt(it.price)}</div>`;
+        <div class="lv">${esc(it.colour)} · ${esc(it.size)}</div><svg></svg><div class="lp">${fmt(l.price || it.price)}</div>`;
       try {
         JsBarcode(d.querySelector('svg'), code, { format: 'CODE128', height: roll ? 26 : 30, width: roll ? 1.3 : 1.4,
           displayValue: true, fontSize: 9, margin: 0, textMargin: 0 });
@@ -1431,6 +1468,9 @@ $('chDate').onchange = () => { if ($('chDate').value) { S.saleDate = $('chDate')
 
 /* ---------------- Transfer stock ---------------- */
 const TR = { lines: [], clientId: null };
+const trToLoc = () => S.meta.locations.find(l => l.id === $('trTo').value);
+const trIsPartner = () => { const l = trToLoc(); return !!l && l.type === 'Partner'; };
+const trPrice = l => (l.price !== null && l.price !== '') ? l.price : priceOf(S.bySku[l.sku], $('trTo').value);
 $('mTransfer').onclick = () => {
   TR.lines = []; TR.clientId = uid();
   const opts = S.meta.locations.map(l => `<option value="${esc(l.id)}">${esc(l.name)}</option>`).join('');
@@ -1444,19 +1484,24 @@ function trAdd(sku){
   const l = TR.lines.find(x => x.sku === sku);
   const want = (l ? Number(l.qty) || 0 : 0) + 1;
   if (want > have) { toast(`Only ${have} of ${it.name} ${it.colour} ${it.size} at the source`, true); return false; }
-  if (l) l.qty = want; else TR.lines.push({ sku, qty: 1 });
+  if (l) l.qty = want; else TR.lines.push({ sku, qty: 1, price: null });
   toast(`Added ${it.name} · ${it.colour} ${it.size}`);
   renderTransfer();
   return true;
 }
+const trWarn = (it, price) => (Number(price) > 0 && it.cost && Number(price) < it.cost) ? 'Below your cost of ' + fmt(it.cost) : '';
 function renderTransfer(){
-  const from = $('trFrom').value;
+  const from = $('trFrom').value, dest = trIsPartner();
+  $('trNote').textContent = dest ? `Prices below are what customers pay at ${trToLoc().name}. Your own-shop price does not change.` : '';
+  show('trNote', dest);
   $('trLines').innerHTML = TR.lines.map((l, i) => {
-    const it = S.bySku[l.sku] || { name: l.sku, colour: '', size: '', stk: {} };
+    const it = S.bySku[l.sku] || { name: l.sku, colour: '', size: '', stk: {}, price: 0 };
     return `<div class="line">
-      <div><div class="pname">${esc(it.name)}</div><div class="pmeta">${esc(it.colour)} · ${esc(it.size)} · ${stockAt(it, from)} available here</div></div><div></div>
-      <div class="line-actions"><label class="pmeta">Qty <input class="mini" type="number" inputmode="numeric" min="1" data-trq="${i}" value="${esc(l.qty)}"></label>
-        <button class="link danger" data-trrm="${i}">Remove</button></div></div>`;
+      <div><div class="pname">${esc(it.name)}</div><div class="pmeta">${esc(it.colour)} · ${esc(it.size)} · ${stockAt(it, from)} available here${dest ? ' · own shop ' + fmt(it.price) : ''}</div></div><div></div>
+      <div class="line-actions" style="flex-wrap:wrap"><label class="pmeta">Qty <input class="mini" type="number" inputmode="numeric" min="1" data-trq="${i}" value="${esc(l.qty)}"></label>
+        ${dest ? `<label class="pmeta">Price ₹ <input class="mini" type="number" inputmode="decimal" min="0" data-trp="${i}" value="${esc(trPrice(l))}"></label>` : ''}
+        <button class="link danger" data-trrm="${i}">Remove</button>
+        ${dest ? `<span class="pmeta" data-trw="${i}" style="color:var(--bad);width:100%">${esc(trWarn(it, trPrice(l)))}</span>` : ''}</div></div>`;
   }).join('') || (partners().length ? '<div class="empty">Search or scan the pieces you are moving.</div>'
                                     : '<div class="empty">No partner shops yet. Add one under More → Partner shops first.</div>');
   trTotals();
@@ -1464,24 +1509,36 @@ function renderTransfer(){
 function trTotals(){
   const pcs = TR.lines.reduce((s, l) => s + (Number(l.qty) || 0), 0);
   const same = $('trFrom').value === $('trTo').value;
-  $('trSaveLabel').textContent = same ? 'Choose two different places' : pcs ? `Move ${pcs} piece${pcs > 1 ? 's' : ''}` : 'Transfer';
-  $('trSave').disabled = !pcs || same;
+  const badPrice = trIsPartner() && TR.lines.some(l => !(Number(trPrice(l)) > 0));
+  $('trSaveLabel').textContent = same ? 'Choose two different places' : badPrice ? 'Enter a price for every item' : pcs ? `Move ${pcs} piece${pcs > 1 ? 's' : ''}` : 'Transfer';
+  $('trSave').disabled = !pcs || same || badPrice;
 }
-$('trFrom').onchange = $('trTo').onchange = () => { renderTransfer(); $('trResults').innerHTML = ''; };
-$('trLines').addEventListener('input', e => { if (e.target.dataset.trq !== undefined) { TR.lines[e.target.dataset.trq].qty = e.target.value; trTotals(); } });
+$('trFrom').onchange = $('trTo').onchange = () => { TR.lines.forEach(l => { l.price = null; }); renderTransfer(); $('trResults').innerHTML = ''; };
+$('trLines').addEventListener('input', e => {
+  const t = e.target;
+  if (t.dataset.trq !== undefined) { TR.lines[t.dataset.trq].qty = t.value; trTotals(); }
+  if (t.dataset.trp !== undefined) {
+    const l = TR.lines[t.dataset.trp]; l.price = t.value;
+    const w = document.querySelector('[data-trw="' + t.dataset.trp + '"]');
+    if (w) w.textContent = trWarn(S.bySku[l.sku] || {}, t.value);
+    trTotals();
+  }
+});
 $('trLines').addEventListener('click', e => { const b = e.target.closest('[data-trrm]'); if (b) { TR.lines.splice(Number(b.dataset.trrm), 1); renderTransfer(); } });
 bindPicker('trQ', 'trResults', trAdd, () => $('trFrom').value);
 $('trScan').onclick = () => openScanner('transfer');
 $('trBack').onclick = () => { if (TR.lines.length && !confirm('Leave without saving this transfer?')) return; show('vTransfer', false); };
 $('trSave').onclick = async () => {
-  const items = TR.lines.filter(l => Number(l.qty) > 0).map(l => ({ sku: l.sku, qty: Math.floor(Number(l.qty)) }));
+  const dest = trIsPartner();
+  const items = TR.lines.filter(l => Number(l.qty) > 0).map(l => ({ sku: l.sku, qty: Math.floor(Number(l.qty)), price: dest ? Number(trPrice(l)) : undefined }));
   show('busy', true);
   try {
     const r = await call('submitTransfer', S.token, { clientId: TR.clientId, from: $('trFrom').value, to: $('trTo').value, items });
     TR.lines = []; TR.clientId = uid();
     await loadCatalog();
     show('vTransfer', false);
-    toast(`Moved ${r.pieces} pieces to ${r.to} (${r.transferId})`);
+    toast(`Moved ${r.pieces} pieces to ${r.to} (${r.transferId})` + (r.pricesChanged ? ` · ${r.pricesChanged} price${r.pricesChanged > 1 ? 's' : ''} set` : ''));
+    if (dest && r.pricesChanged && confirm('Print price tags for these items at the new prices?')) openLabels(items.map(i => ({ sku: i.sku, qty: i.qty, price: i.price })));
   } catch(e){ toast(e.message, true); }
   show('busy', false);
 };
@@ -1501,15 +1558,17 @@ async function loadPartners(){
       <div class="kv"><span>Stock value at selling price</span><b>${fmt(p.valueMrp)}</b></div>
       <div class="kv"><span>Sales this month (net of returns)</span><b>${fmt(p.monthSales)}</b></div>
       ${p.items.length ? `<details><summary>See what is in their shop</summary><div class="stocklist">${p.items.map(i =>
-        `<div><span>${esc(i.name)} · ${esc(i.colour)} ${esc(i.size)}</span><b>${i.qty}</b></div>`).join('')}</div></details>` : ''}
+        `<div><span>${esc(i.name)} · ${esc(i.colour)} ${esc(i.size)}<br><span class="pmeta">${fmt(i.price)}${i.price !== i.defaultPrice ? ' here · own shop ' + fmt(i.defaultPrice) : ''}</span></span><b>${i.qty}</b></div>`).join('')}</div></details>` : ''}
       <div class="btnrow"><button class="link" data-pedit="${esc(p.id)}">Edit terms</button>
+        ${p.items.length ? `<button class="link" data-pprice="${esc(p.id)}">Change prices</button>` : ''}
         ${p.active && !p.units ? `<button class="link danger" data-poff="${esc(p.id)}">Deactivate</button>` : ''}</div></div>`).join('')
       || '<div class="empty">No partner shops yet. Add the first one below.</div>';
     S.partnerList = list;
   } catch(e){ $('paList').innerHTML = `<div class="empty">${esc(e.message)}</div>`; }
 }
 $('paList').onclick = async e => {
-  const ed = e.target.closest('[data-pedit]'), off = e.target.closest('[data-poff]');
+  const ed = e.target.closest('[data-pedit]'), off = e.target.closest('[data-poff]'), pr = e.target.closest('[data-pprice]');
+  if (pr) return openPrices(pr.dataset.pprice);
   try {
     if (ed) {
       const p = S.partnerList.find(x => x.id === ed.dataset.pedit);
@@ -1531,6 +1590,51 @@ $('paAdd').onclick = async () => {
     $('paName').value = ''; $('paRent').value = '';
     await loadMeta(); await loadPartners();
     toast('Partner shop added. Use Transfer stock to send it pieces.');
+  } catch(e){ toast(e.message, true); }
+  show('busy', false);
+};
+
+/* ---------------- Partner shop prices ---------------- */
+const PR = { loc: null, items: [] };
+function openPrices(locId){
+  const p = S.partnerList.find(x => x.id === locId); if (!p) return;
+  PR.loc = p; PR.items = p.items.map(i => Object.assign({}, i, { now: i.price }));
+  $('prTitle').textContent = 'Prices at ' + p.name;
+  renderPrices(); show('vPrices', true);
+}
+function renderPrices(){
+  $('prLines').innerHTML = PR.items.map((i, k) => `<div class="line">
+    <div><div class="pname">${esc(i.name)}</div><div class="pmeta">${esc(i.colour)} · ${esc(i.size)} · ${i.qty} here · own shop ${fmt(i.defaultPrice)}</div></div><div></div>
+    <div class="line-actions" style="flex-wrap:wrap"><label class="pmeta">Price ₹ <input class="mini" type="number" inputmode="decimal" min="0" data-prp="${k}" value="${esc(i.now)}"></label>
+      <button class="link" data-prown="${k}">Use own-shop price</button>
+      <span class="pmeta" data-prw="${k}" style="color:var(--bad);width:100%">${esc(trWarn(i, i.now))}</span></div></div>`).join('');
+  prTotals();
+}
+function prChanged(){ return PR.items.filter(i => Number(i.now) > 0 && Math.abs(Number(i.now) - i.price) > 0.004); }
+function prTotals(){
+  const n = prChanged().length, bad = PR.items.some(i => !(Number(i.now) > 0));
+  $('prSaveLabel').textContent = bad ? 'Enter a price for every item' : n ? `Save ${n} price${n > 1 ? 's' : ''}` : 'No changes';
+  $('prSave').disabled = bad || !n;
+}
+$('prLines').addEventListener('input', e => {
+  const k = e.target.dataset.prp; if (k === undefined) return;
+  PR.items[k].now = e.target.value;
+  const w = document.querySelector('[data-prw="' + k + '"]'); if (w) w.textContent = trWarn(PR.items[k], e.target.value);
+  prTotals();
+});
+$('prLines').addEventListener('click', e => {
+  const b = e.target.closest('[data-prown]'); if (!b) return;
+  PR.items[b.dataset.prown].now = PR.items[b.dataset.prown].defaultPrice; renderPrices();
+});
+$('prBack').onclick = () => show('vPrices', false);
+$('prSave').onclick = async () => {
+  const items = prChanged().map(i => ({ sku: i.sku, price: Number(i.now) }));
+  show('busy', true);
+  try {
+    const r = await call('setLocationPrices', S.token, { locationId: PR.loc.id, items });
+    show('vPrices', false);
+    await loadCatalog(); loadPartners();
+    toast(r.changed + ' price' + (r.changed === 1 ? '' : 's') + ' updated at ' + PR.loc.name);
   } catch(e){ toast(e.message, true); }
   show('busy', false);
 };
