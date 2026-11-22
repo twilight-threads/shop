@@ -188,6 +188,29 @@
   .okbox{background:#EEF6F1;border:1px solid #BBD9C7;border-radius:var(--r-md);padding:10px 12px;margin-top:10px;font-size:14px}
   .filebox{border:1.5px dashed var(--line);background:#fff;border-radius:var(--r-md);padding:14px;margin:10px 0}
   .filebox input[type=file]{width:100%;font:inherit}
+  .kpis{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:10px 0}
+  .kpi{background:#fff;border:1px solid var(--line);border-radius:var(--r-md);padding:12px}
+  .kpi .k{font-size:13px;color:var(--muted)}
+  .kpi .v{font-size:22px;font-weight:800;letter-spacing:-.02em;margin:2px 0}
+  .kpi.hero{background:var(--indigo);border-color:var(--indigo);color:#fff}
+  .kpi.hero .k{color:#C9CFF0}
+  .delta{font-size:12px;font-weight:700;padding:1px 6px;border-radius:999px;background:#E6F2EC;color:var(--ok)}
+  .delta.down{background:#FBEAEA;color:var(--bad)}
+  .kpi.hero .delta{background:rgba(255,255,255,.18);color:#fff}
+  .card{background:#fff;border:1px solid var(--line);border-radius:var(--r-md);padding:14px;margin-bottom:10px}
+  .card h3{margin:0 0 8px;font-size:15px}
+  .card .head{display:flex;justify-content:space-between;align-items:center;margin-bottom:6px}
+  .hbar{display:grid;grid-template-columns:84px 1fr auto;gap:8px;align-items:center;padding:4px 0;font-size:14px}
+  .hbar .track{background:#EEF0F7;border-radius:6px;height:10px;overflow:hidden}
+  .hbar .fill{background:var(--indigo-2);height:100%;border-radius:6px}
+  .row2{display:flex;justify-content:space-between;gap:8px;padding:6px 0;border-top:1px dashed var(--line);font-size:14px}
+  .row2:first-of-type{border-top:0}
+  .chip-row{display:flex;flex-wrap:wrap;gap:6px;margin-top:6px}
+  .chip-row span{background:#EEF0F7;border-radius:999px;padding:3px 10px;font-size:13px}
+  .alert{color:var(--bad);font-weight:700}
+  .pos{color:var(--ok)} .neg{color:var(--bad)}
+  .diff{font-weight:800;min-width:48px;text-align:right}
+  .bigfig{font-size:30px;font-weight:800;letter-spacing:-.02em}
   #labelSheet{display:none}
   @media print{
     body[data-print="receipt"] *{visibility:hidden}
@@ -229,6 +252,7 @@
     <nav role="tablist">
       <button role="tab" id="tabSell" aria-selected="true">Sell</button>
       <button role="tab" id="tabToday" aria-selected="false">Today</button>
+      <button role="tab" id="tabDash" aria-selected="false" class="owner-only hidden">Dashboard</button>
       <button role="tab" id="tabMore" aria-selected="false">More</button>
     </nav>
   </header>
@@ -245,6 +269,7 @@
   </main>
 
   <main id="vToday" class="hidden"></main>
+  <main id="vDash" class="hidden"></main>
 
   <main id="vMore" class="hidden">
     <div class="menu">
@@ -257,6 +282,8 @@
       <button id="mPartners" class="owner-only"><span><b>Partner shops</b><small>Their stock, sales this month, rent and commission terms</small></span><span class="chev">›</span></button>
       <button id="mSettle" class="owner-only"><span><b>Partner settlement</b><small>Month-end: commission, rent and money received</small></span><span class="chev">›</span></button>
       <button id="mOwners" class="owner-only"><span><b>Owners’ accounts</b><small>Capital, drawings, profit split, expenses paid from an owner’s pocket</small></span><span class="chev">›</span></button>
+      <button id="mAdjust" class="owner-only"><span><b>Adjust stock</b><small>Count a shelf or a shop and correct what the system shows</small></span><span class="chev">›</span></button>
+      <button id="mMoney" class="owner-only"><span><b>Money &amp; capital</b><small>Implied cash and bank balance, where the capital is, balance checks</small></span><span class="chev">›</span></button>
       <button id="mLabels"><span><b>Print barcode labels</b><small>Tags for items, ready to scan</small></span><span class="chev">›</span></button>
     </div>
   </main>
@@ -499,6 +526,33 @@
     <div id="prLines"></div>
   </div>
   <div class="billbar"><button id="prSave"><span id="prSaveLabel">Save prices</span><span></span></button></div>
+</section>
+
+<!-- Money & capital -->
+<section id="vMoney" class="sheet hidden" aria-label="Money and capital">
+  <div class="sheet-head"><button class="icon-btn" id="mnBack">Back</button><h2>Money &amp; capital</h2></div>
+  <div class="wrap"><div id="mnBody"></div></div>
+</section>
+
+<!-- Adjust stock -->
+<section id="vAdjust" class="sheet hidden" aria-label="Adjust stock">
+  <div class="sheet-head"><button class="icon-btn" id="ajBack">Back</button><h2>Adjust stock</h2></div>
+  <div class="wrap">
+    <p class="note">Count what is physically there and enter it. The app works out the difference and records it, so stock, profit and your capital accounts stay right.</p>
+    <div class="grid2">
+      <div class="field"><label for="ajLoc">Where you counted</label><select id="ajLoc"></select></div>
+      <div class="field"><label for="ajReason">Reason</label><select id="ajReason"></select></div>
+    </div>
+    <div class="field"><label for="ajQ">Add items</label>
+      <div class="inrow"><input id="ajQ" type="search" autocomplete="off" placeholder="Search or scan"><button id="ajScan">Scan</button></div></div>
+    <div class="results" id="ajResults"></div>
+    <button class="link" id="ajAll">+ Add every item in stock here (full count)</button>
+    <div id="ajLines"></div>
+    <div class="totals num hidden" id="ajSummary"></div>
+    <h3 style="margin:22px 0 8px;font-size:16px">Recent adjustments</h3>
+    <div id="ajHistory"></div>
+  </div>
+  <div class="billbar"><button id="ajSave"><span id="ajSaveLabel">Record adjustment</span><span class="num" id="ajSaveAmt"></span></button></div>
 </section>
 
 <!-- Labels -->
@@ -873,16 +927,18 @@ $('newSaleBtn').onclick = $('rcptBack').onclick = () => { show('vReceipt', false
 function setTab(which){
   if (which === true) which = 'today';
   if (which === false || !which) which = 'sell';
-  ['sell', 'today', 'more'].forEach(t => {
+  ['sell', 'today', 'dash', 'more'].forEach(t => {
     const id = 'tab' + t[0].toUpperCase() + t.slice(1);
     $(id).setAttribute('aria-selected', t === which);
     show('v' + t[0].toUpperCase() + t.slice(1), t === which);
   });
   show('billbar', which === 'sell');
   if (which === 'today') loadToday();
+  if (which === 'dash') loadDash();
 }
 $('tabSell').onclick = () => setTab('sell');
 $('tabToday').onclick = () => setTab('today');
+$('tabDash').onclick = () => setTab('dash');
 $('tabMore').onclick = () => setTab('more');
 
 async function loadToday(){
@@ -976,7 +1032,7 @@ document.addEventListener('keydown', e => {
 const uid = () => Date.now().toString(36) + Math.random().toString(36).slice(2);
 const todayISO = () => { const d = new Date(); return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0'); };
 const isOpen = id => !$(id).classList.contains('hidden');
-const SHEETS = ['vBill', 'vReceipt', 'vReturn', 'vExpense', 'vStockIn', 'vNewProd', 'vLabels', 'vScan', 'vChannel', 'vTransfer', 'vPartners', 'vSettle', 'vOwners', 'vCapEntry', 'vImport', 'vPrices'];
+const SHEETS = ['vBill', 'vReceipt', 'vReturn', 'vExpense', 'vStockIn', 'vNewProd', 'vLabels', 'vScan', 'vChannel', 'vTransfer', 'vPartners', 'vSettle', 'vOwners', 'vCapEntry', 'vImport', 'vPrices', 'vMoney', 'vAdjust'];
 
 async function loadMeta(){
   S.meta = await call('getMeta', S.token);
@@ -1005,6 +1061,7 @@ function currentScanTarget(){
   if (isOpen('vScan')) return null;
   if (isOpen('vStockIn')) return 'stockin';
   if (isOpen('vTransfer')) return 'transfer';
+  if (isOpen('vAdjust')) return 'adjust';
   if (isOpen('vLabels')) return 'labels';
   if (isOpen('vBill')) return 'sell';
   if (SHEETS.some(isOpen)) return null;
@@ -1013,6 +1070,7 @@ function currentScanTarget(){
 function onScanHit(hit, target){
   if (target === 'stockin') return siAdd(hit.sku);
   if (target === 'transfer') return trAdd(hit.sku);
+  if (target === 'adjust') return ajAdd(hit.sku);
   if (target === 'labels') return lbAdd(hit.sku);
   const ok = addToCart(hit.sku);
   if (ok && isOpen('vBill')) renderBill();
@@ -1658,7 +1716,7 @@ $('seBack').onclick = () => show('vSettle', false);
 const seYm = () => $('seYear').value + '-' + String($('seMonth').value).padStart(2, '0');
 ['seLoc', 'seMonth', 'seYear'].forEach(id => $(id).onchange = () => loadSettlePreview());
 function renderRentModes(){
-  seg('seRentMode', ['UPI', 'Cash', 'Card', 'Partner'], SE.rentMode, v => { SE.rentMode = v; renderRentModes(); });
+  seg('seRentMode', ['UPI', 'Cash', 'Card', 'Bank transfer'], SE.rentMode, v => { SE.rentMode = v; renderRentModes(); });
 }
 async function loadSettlePreview(){
   $('sePreview').innerHTML = '<div class="empty">Working it out…</div>'; show('seBar', false);
@@ -1965,6 +2023,231 @@ $('imGo').onclick = async () => {
       }
     }
   } catch(e){ toast(e.message, true); }
+  show('busy', false);
+};
+
+/* ---------------- Dashboard ---------------- */
+const DB = { period: 'month', data: null };
+const DB_LABELS = { today: 'Today', week: '7 days', month: 'Month', fy: 'Year', all: 'All' };
+const DB_NAMES = { today: 'today', week: 'the last 7 days', month: 'this month', fy: 'this financial year', all: 'all time' };
+function dbDelta(cur, prev, invert){
+  if (prev === null || prev === undefined) return '';
+  if (prev === 0) return cur ? '<span class="delta">new</span>' : '';
+  const up = cur >= prev, good = invert ? !up : up;
+  return `<span class="delta ${good ? '' : 'down'}">${up ? '▲' : '▼'} ${Math.abs(Math.round((cur - prev) / Math.abs(prev) * 100))}%</span>`;
+}
+function dbTrend(series){
+  const w = 320, h = 92, n = Math.max(series.length, 1), max = Math.max(1, ...series.map(x => x.value));
+  const bw = w / n, gap = Math.min(4, bw * 0.25);
+  const bars = series.map((x, i) => { const hh = Math.max(0, x.value) / max * (h - 4);
+    return `<rect x="${(i * bw + gap / 2).toFixed(1)}" y="${(h - hh).toFixed(1)}" width="${(bw - gap).toFixed(1)}" height="${hh.toFixed(1)}" rx="2" fill="var(--indigo-2)"><title>${esc(x.label)}: ${fmt(x.value)}</title></rect>`; }).join('');
+  const at = i => `<text x="${((i + 0.5) * bw).toFixed(1)}" y="108" font-size="10" text-anchor="middle" fill="var(--muted)">${esc((series[i] || {}).label || '')}</text>`;
+  const labels = n <= 8 ? series.map((x, i) => at(i)).join('') : [0, Math.floor(n / 2), n - 1].map(at).join('');
+  return `<svg viewBox="0 0 ${w} 114" width="100%" role="img" aria-label="Sales trend">${bars}${labels}</svg>`;
+}
+function dbBars(rows, key, val){
+  const max = Math.max(1, ...rows.map(r => Math.abs(r[val])));
+  return rows.map(r => `<div class="hbar"><span>${esc(r[key])}</span><div class="track"><div class="fill" style="width:${Math.max(2, Math.abs(r[val]) / max * 100)}%"></div></div><b class="num">${fmt(r[val])}</b></div>`).join('');
+}
+async function loadDash(){
+  const seg = `<div class="seg" id="dbSeg" style="grid-template-columns:repeat(5,1fr)">${Object.keys(DB_LABELS).map(k =>
+    `<button aria-pressed="${k === DB.period}" data-period="${k}">${DB_LABELS[k]}</button>`).join('')}</div>`;
+  if (!DB.data) $('vDash').innerHTML = seg + '<div class="empty">Loading the dashboard…</div>';
+  try {
+    DB.data = await call('getDashboard', S.token, { period: DB.period });
+    renderDash(seg);
+  } catch(e){ $('vDash').innerHTML = seg + `<div class="empty">${esc(e.message)}</div>`; }
+}
+function renderDash(seg){
+  const d = DB.data, c = d.cur, pv = d.prev, st = d.stock;
+  const kpi = (k, v, extra, cls) => `<div class="kpi ${cls || ''}"><div class="k">${k}</div><div class="v num">${v}</div><div>${extra || ''}</div></div>`;
+  $('vDash').innerHTML = seg + `
+    <div class="kpis num">
+      ${kpi('Net profit', fmt(c.net), dbDelta(c.net, pv && pv.net), 'hero')}
+      ${kpi('Sales', fmt(c.revenue), dbDelta(c.revenue, pv && pv.revenue))}
+      ${kpi('Gross profit', fmt(c.gross), `<span class="pmeta">${c.margin}% margin</span>`)}
+      ${kpi('Expenses', fmt(c.expenses), dbDelta(c.expenses, pv && pv.expenses, true))}
+    </div>
+    <div class="chip-row" style="margin:-2px 0 10px"><span>${c.bills} bill${c.bills === 1 ? '' : 's'}</span><span>avg ${fmt(c.avgBill)}</span><span>${c.units} pieces sold</span>${c.discounts ? `<span>${fmt(c.discounts)} discounts</span>` : ''}</div>
+    ${d.commissionToSettle > 0.5 ? `<div class="banner"><span><b>Partner commission still to settle: ${fmt(d.commissionToSettle)}.</b> It is not in profit until you save the monthly settlement.</span></div>` : ''}
+    <div class="card"><div class="head"><h3>Sales</h3><span class="pmeta">${d.series.length > 12 || d.period === 'fy' || d.period === 'all' ? 'by month' : 'by day'}</span></div>${dbTrend(d.series)}</div>
+    <div class="card"><h3>Where sales came from</h3>${d.byChannel.length ? dbBars(d.byChannel, 'channel', 'amount') : '<div class="note">No sales in this period.</div>'}
+      ${d.byMode.length ? `<div class="chip-row">${d.byMode.map(m => `<span>${esc(m.mode)} ${fmt(m.amount)}</span>`).join('')}</div>` : ''}</div>
+    <div class="card"><div class="head"><h3>Money</h3><button class="link" id="dbMoney">Money &amp; capital ›</button></div>
+      <div class="row2"><span>Implied cash and bank</span><b class="num">${fmt(d.money.implied)}</b></div>
+      <div class="row2"><span>Partner shops owe you</span><b class="num">${fmt(d.money.partnerOwes)}</b></div>
+      <div class="row2"><span>Business owes owners</span><b class="num">${fmt(d.money.owedToOwners)}</b></div></div>
+    <div class="card"><div class="head"><h3>Stock</h3><button class="link" id="dbAdjust">Adjust stock ›</button></div>
+      <div class="row2"><span>Pieces: main ${st.mainUnits} · partner shops ${st.partnerUnits}</span><b class="num">${st.units}</b></div>
+      <div class="row2"><span>Value at cost: main</span><b class="num">${fmt(st.valueMain)}</b></div>
+      <div class="row2"><span>Value at cost: partner shops</span><b class="num">${fmt(st.valuePartners)}</b></div>
+      <div class="row2"><span>${st.outOfStock} item${st.outOfStock === 1 ? '' : 's'} out of stock</span><b class="${st.lowCount ? 'alert' : ''}">${st.lowCount} to reorder</b></div>
+      ${st.low.map(l => `<div class="row2"><span>${esc(l.name)} · ${esc(l.colour)} ${esc(l.size)}</span><span class="num"><b class="alert">${l.total}</b> left <span class="pmeta">(reorder at ${l.reorder})</span></span></div>`).join('')}
+      ${st.lowCount > st.low.length ? `<div class="pmeta">…and ${st.lowCount - st.low.length} more. See the Stock tab in the spreadsheet.</div>` : ''}</div>
+    <div class="card"><h3>Top sellers</h3>${d.topItems.length ? d.topItems.map(t => `<div class="row2"><span>${esc(t.name)} · ${esc(t.colour)} ${esc(t.size)}<br><span class="pmeta">${t.units} sold</span></span><b class="num">${fmt(t.revenue)}</b></div>`).join('') : '<div class="note">No sales in this period.</div>'}</div>
+    ${d.partners.length ? `<div class="card"><h3>Partner shops</h3>${d.partners.map(p => `<div class="row2"><span><b>${esc(p.name)}</b><br><span class="pmeta">${p.units} pcs there · sold ${fmt(p.sales)} ${esc(DB_NAMES[d.period])}</span></span><span class="num" style="text-align:right">owes you<br><b>${fmt(p.owes)}</b></span></div>`).join('')}</div>` : ''}
+    <div class="card"><h3>Expenses by category</h3>${d.expenseCats.length ? dbBars(d.expenseCats, 'category', 'amount') : '<div class="note">No expenses in this period.</div>'}</div>
+    <p class="note">Sales are before partner commission. Profit counts commission once you save the monthly settlement, and includes stock lost or damaged.</p>`;
+}
+$('vDash').onclick = e => {
+  const b = e.target.closest('[data-period]');
+  if (b) { DB.period = b.dataset.period; DB.data = null; loadDash(); return; }
+  if (e.target.closest('#dbMoney')) openMoney();
+  if (e.target.closest('#dbAdjust')) openAdjust();
+};
+
+/* ---------------- Money & capital ---------------- */
+const MN = { data: null };
+$('mMoney').onclick = () => openMoney();
+$('mnBack').onclick = () => show('vMoney', false);
+function openMoney(){ show('vMoney', true); loadMoney(); }
+async function loadMoney(){
+  $('mnBody').innerHTML = '<div class="empty">Working it out…</div>';
+  try { MN.data = await call('getMoneyReport', S.token); renderMoney(); }
+  catch(e){ $('mnBody').innerHTML = `<div class="empty">${esc(e.message)}</div>`; }
+}
+function renderMoney(){
+  const d = MN.data, cp = d.capital, sign = n => Math.abs(n) < 0.005 ? fmt(0) : (n > 0 ? '+' : '−') + fmt(Math.abs(n)).replace('−', '');
+  const last = d.checks[0];
+  $('mnBody').innerHTML = `
+    <div class="daytotal num"><div class="sub">Implied cash and bank balance</div><div class="amt">${fmt(d.implied)}</div>
+      <div class="sub">What your records say should be in the cash drawer and bank accounts together.</div></div>
+    <div class="card num">${d.parts.map(p => `<div class="row2"><span>${esc(p.label)}</span><b class="${p.amount > 0 ? 'pos' : p.amount < 0 ? 'neg' : ''}">${sign(p.amount)}</b></div>`).join('')}
+      <div class="row2"><b>Implied balance</b><b>${fmt(d.implied)}</b></div></div>
+
+    <div class="card"><h3>Check it against reality</h3>
+      <p class="note" style="margin-top:0">Add up what is really in the cash drawer and every bank and UPI account, and enter the total.</p>
+      <div class="field" style="margin:8px 0"><label for="mnActual">Actual cash + bank total (₹)</label><input id="mnActual" type="number" inputmode="decimal"></div>
+      <div class="field" style="margin:8px 0"><label for="mnNotes">Notes (optional)</label><input id="mnNotes" type="text" autocomplete="off" placeholder="e.g. drawer ₹X + bank ₹Y"></div>
+      <button class="link" id="mnSave" style="font-size:16px">Save this check</button>
+      <div id="mnResult"></div>
+      ${d.sinceLastCheck ? `<div class="pmeta" style="margin-top:10px">Changes since your last check on ${esc(d.sinceLastCheck.date)}:</div>` +
+        (d.sinceLastCheck.changes.length ? d.sinceLastCheck.changes.map(c => `<div class="row2 num"><span>${esc(c.label)}</span><b class="${c.delta >= 0 ? 'pos' : 'neg'}">${sign(c.delta)}</b></div>`).join('') : '<div class="note">Nothing has changed since.</div>') : ''}
+      ${d.checks.length ? '<div class="pmeta" style="margin-top:10px">Previous checks</div>' + d.checks.map(c => `<div class="row2 num"><span>${esc(c.date)} · you had ${fmt(c.actual)}${c.notes ? '<br><span class="pmeta">' + esc(c.notes) + '</span>' : ''}</span><b class="${Math.abs(c.difference) < 1 ? 'pos' : 'neg'}">${Math.abs(c.difference) < 1 ? 'matched' : (c.difference > 0 ? '+' : '−') + fmt(Math.abs(c.difference)).replace('−', '')}</b></div>`).join('') : ''}</div>
+
+    <div class="card num"><h3>Where the capital is</h3>
+      <div class="row2"><span>Cash and bank (implied)</span><b>${fmt(d.implied)}</b></div>
+      <div class="row2"><span>Stock in main, at recorded cost</span><b>${fmt(d.stockMain)}</b></div>
+      <div class="row2"><span>Stock in partner shops, at cost</span><b>${fmt(d.stockPartners)}</b></div>
+      <div class="row2"><span>Partner shops owe you</span><b>${fmt(d.partnerOwes)}</b></div>
+      <div class="row2"><span>Customers owe you (credit sales)</span><b>${fmt(d.customerCredit)}</b></div>
+      <div class="row2"><span>Less: business owes owners</span><b>${fmt(-d.owedToOwners)}</b></div>
+      <div class="row2"><b>Total</b><b>${fmt(d.netAssets)}</b></div></div>
+    <div class="card num"><h3>Owners’ capital</h3>
+      <div class="row2"><span>Capital put in</span><b>${fmt(cp.contributed)}</b></div>
+      <div class="row2"><span>Drawings</span><b>${fmt(-cp.drawings)}</b></div>
+      <div class="row2"><span>Profit to date</span><b>${fmt(cp.profit)}</b></div>
+      ${Math.abs(cp.accruedCommission) >= 0.5 ? `<div class="row2"><span>Less: partner commission not yet settled</span><b>${fmt(-cp.accruedCommission)}</b></div>` : ''}
+      <div class="row2"><b>Total capital</b><b>${fmt(cp.total)}</b></div></div>
+    ${Math.abs(d.tie) >= 1 ? `<div class="errbox"><b>These two totals differ by ${fmt(d.tie)}.</b> That usually means an entry was edited or deleted directly in the spreadsheet. Check the ledger tabs.</div>` : '<div class="okbox">The two totals agree, so everything recorded in the app is accounted for.</div>'}
+    <p class="note">How it works: the implied balance starts from the money owners put in, adds sales collected, and takes away what was paid out. Opening stock is assumed to have been paid for from capital. Credit sales count as money owed until they are collected, and there is no screen to record that yet.</p>`;
+}
+$('mnBody').onclick = async e => {
+  if (!e.target.closest('#mnSave')) return;
+  const v = $('mnActual').value;
+  if (v === '') return toast('Enter the total of your cash and bank balances', true);
+  show('busy', true);
+  try {
+    const r = await call('saveBalanceCheck', S.token, { clientId: uid(), actual: Number(v), notes: $('mnNotes').value.trim() });
+    await loadMoney();
+    const diff = r.difference;
+    $('mnResult').innerHTML = Math.abs(diff) < 1
+      ? '<div class="okbox"><b>Matches.</b> Your records agree with what you counted.</div>'
+      : `<div class="errbox"><b>You have ${fmt(Math.abs(diff))} ${diff < 0 ? 'less' : 'more'} than the records show.</b><br>` +
+        (diff < 0 ? 'Look for expenses or stock purchases paid but not entered, owner drawings not entered, cash taken, or sales entered but not actually collected.'
+                  : 'Look for sales not entered, capital an owner put in but did not record, or money received from a partner shop that was not recorded.') + '</div>';
+    $('mnResult').scrollIntoView({ block: 'center' });
+  } catch(err){ toast(err.message, true); }
+  show('busy', false);
+};
+
+/* ---------------- Adjust stock ---------------- */
+const AJ = { lines: [], clientId: null };
+$('mAdjust').onclick = () => openAdjust();
+function openAdjust(){
+  AJ.lines = []; AJ.clientId = uid();
+  $('ajLoc').innerHTML = S.meta.locations.map(l => `<option value="${esc(l.id)}">${esc(l.name)}</option>`).join('');
+  $('ajLoc').value = 'MAIN';
+  $('ajReason').innerHTML = ['Count correction', 'Damaged', 'Lost or missing', 'Found extra', 'Gift or sample', 'Other'].map(r => `<option>${r}</option>`).join('');
+  $('ajQ').value = ''; $('ajResults').innerHTML = '';
+  renderAdjust(); show('vAdjust', true); loadAdjHistory();
+}
+function ajAdd(sku){
+  const it = S.bySku[sku]; if (!it) return false;
+  if (AJ.lines.find(l => l.sku === sku)) { toast('Already in the list', true); return false; }
+  const sys = stockAt(it, $('ajLoc').value);
+  AJ.lines.push({ sku, expected: sys, counted: sys, stale: false });
+  toast(`Added ${it.name} · ${it.colour} ${it.size}`);
+  renderAdjust();
+  return true;
+}
+function ajDiff(l){ const c = Number(l.counted); return l.counted === '' || isNaN(c) ? 0 : c - l.expected; }
+function renderAdjust(){
+  $('ajLines').innerHTML = AJ.lines.map((l, i) => {
+    const it = S.bySku[l.sku] || { name: l.sku, colour: '', size: '' }, d = ajDiff(l);
+    return `<div class="line"><div><div class="pname">${esc(it.name)}</div><div class="pmeta">${esc(it.colour)} · ${esc(it.size)} · system says ${l.expected}</div>
+      ${l.stale ? '<div class="pmeta alert">Stock changed while you were counting. Check this count.</div>' : ''}</div>
+      <div class="lt num diff ${d < 0 ? 'neg' : d > 0 ? 'pos' : ''}" data-ajd="${i}">${d > 0 ? '+' : d < 0 ? '−' : ''}${Math.abs(d) || ''}</div>
+      <div class="line-actions"><label class="pmeta">Counted <input class="mini" type="number" inputmode="numeric" min="0" data-ajq="${i}" value="${esc(l.counted)}"></label>
+        <button class="link danger" data-ajrm="${i}">Remove</button></div></div>`;
+  }).join('') || '<div class="empty">Search or scan what you counted, or add every item for a full count.</div>';
+  ajTotals();
+}
+function ajTotals(){
+  let lost = 0, gained = 0, value = 0, n = 0;
+  AJ.lines.forEach(l => { const d = ajDiff(l), it = S.bySku[l.sku]; if (!d) return; n++; if (d < 0) lost += -d; else gained += d; value += d * ((it && it.cost) || 0); });
+  show('ajSummary', n > 0);
+  if (n) $('ajSummary').innerHTML = `<div><span>${n} item${n > 1 ? 's' : ''} differ</span><span></span></div>
+    ${lost ? `<div><span>Missing or lost pieces</span><span class="neg">−${lost}</span></div>` : ''}${gained ? `<div><span>Extra pieces found</span><span class="pos">+${gained}</span></div>` : ''}
+    <div class="grand"><span>Effect on profit (at cost)</span><span class="${value < 0 ? 'neg' : 'pos'}">${fmt(value)}</span></div>`;
+  $('ajSaveLabel').textContent = n ? `Record ${n} adjustment${n > 1 ? 's' : ''}` : 'No differences yet';
+  $('ajSaveAmt').textContent = n ? fmt(value) : '';
+  $('ajSave').disabled = !n;
+}
+$('ajLines').addEventListener('input', e => {
+  const k = e.target.dataset.ajq; if (k === undefined) return;
+  AJ.lines[k].counted = e.target.value;
+  const d = ajDiff(AJ.lines[k]), el = document.querySelector('[data-ajd="' + k + '"]');
+  if (el) { el.textContent = (d > 0 ? '+' : d < 0 ? '−' : '') + (Math.abs(d) || ''); el.className = 'lt num diff ' + (d < 0 ? 'neg' : d > 0 ? 'pos' : ''); }
+  ajTotals();
+});
+$('ajLines').addEventListener('click', e => { const b = e.target.closest('[data-ajrm]'); if (b) { AJ.lines.splice(Number(b.dataset.ajrm), 1); renderAdjust(); } });
+$('ajLoc').onchange = () => { AJ.lines = []; renderAdjust(); $('ajResults').innerHTML = ''; };
+bindPicker('ajQ', 'ajResults', ajAdd, () => $('ajLoc').value);
+$('ajScan').onclick = () => openScanner('adjust');
+$('ajAll').onclick = () => {
+  const loc = $('ajLoc').value;
+  S.items.forEach(i => { const sys = stockAt(i, loc); if (sys > 0 && !AJ.lines.find(l => l.sku === i.sku)) AJ.lines.push({ sku: i.sku, expected: sys, counted: sys, stale: false }); });
+  renderAdjust();
+};
+$('ajBack').onclick = () => {
+  if (AJ.lines.some(l => ajDiff(l)) && !confirm('Leave without recording these adjustments?')) return;
+  show('vAdjust', false);
+};
+async function loadAdjHistory(){
+  try {
+    const h = await call('listAdjustments', S.token);
+    $('ajHistory').innerHTML = h.map(a => `<div class="bill num" style="cursor:default"><span><b>${esc(a.date)}</b> · ${esc(a.location)}<br><span class="pmeta">${esc(a.reason || 'Adjustment')} · ${a.items} item${a.items > 1 ? 's' : ''}</span></span>
+      <span style="text-align:right"><b class="${a.pieces < 0 ? 'neg' : 'pos'}">${a.pieces > 0 ? '+' : a.pieces < 0 ? '−' : ''}${Math.abs(a.pieces)} pcs</b><br><span class="pmeta">${fmt(a.value)}</span></span></div>`).join('') || '<div class="note">No adjustments yet.</div>';
+  } catch(e){ $('ajHistory').innerHTML = `<div class="note">${esc(e.message)}</div>`; }
+}
+$('ajSave').onclick = async () => {
+  const items = AJ.lines.filter(l => ajDiff(l) !== 0).map(l => ({ sku: l.sku, counted: Number(l.counted), expected: l.expected }));
+  if (!items.length) return;
+  show('busy', true);
+  try {
+    const r = await call('submitAdjustment', S.token, { clientId: AJ.clientId, locationId: $('ajLoc').value, reason: $('ajReason').value, items });
+    AJ.lines = []; AJ.clientId = uid(); renderAdjust();
+    await loadCatalog(); loadAdjHistory();
+    toast(`Adjusted ${r.items} item${r.items > 1 ? 's' : ''} at ${r.location}: ${r.lost ? '−' + r.lost + ' ' : ''}${r.gained ? '+' + r.gained + ' ' : ''}pcs, ${fmt(r.value)}`);
+  } catch(e){
+    toast(e.message, true);
+    if (/changed while you were counting/.test(e.message)) {
+      await loadCatalog();
+      AJ.lines.forEach(l => { const now = stockAt(S.bySku[l.sku] || {}, $('ajLoc').value); if (now !== l.expected) { l.expected = now; l.stale = true; } });
+      renderAdjust();
+    }
+  }
   show('busy', false);
 };
 
